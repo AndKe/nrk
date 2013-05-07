@@ -1,6 +1,6 @@
 <?Php
 require_once 'get.php'; //cURL get function
-require_once 'dependcheck.php'; //Sjekk avhengigheter
+//require_once 'dependcheck.php'; //Sjekk avhengigheter
 require_once 'subconvert.php'; //Verktøy for å konvertere undertekster
 
 $agent='Mozilla/5.0 (iPhone; CPU iPhone OS 5_1 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko) Version/5.1 Mobile/9B176 Safari/7534.48.3';
@@ -148,13 +148,14 @@ function subtitle($id,$filnavn) //$filnavn skal være fullstendig bane uten exte
 //	$name=title($id);
 /*	if(substr($outdir,-1,1)!='/')
 		$outdir.='/';*/
+	$subconvert=new subconvert;
 	if(!file_exists($filnavn.".srt"))
 	{
 		$xml=file_get_contents('http://tv.nrk.no/programsubtitles/'.$id);
 		if(trim($xml)!='')
 		{
 			file_put_contents($filnavn.".xml",$xml);
-			$srt=xmltosrt($xml);
+			$srt=$subconvert->xmltosrt($xml);
 			file_put_contents($filnavn.".srt",$srt);
 			//copy('http://tv.nrk.no/programsubtitles/'.$id,$outdir."subs/$name.xml");
 			$return=$filnavn.".srt";
