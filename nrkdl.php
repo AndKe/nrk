@@ -1,4 +1,4 @@
-﻿<?Php
+<?Php
 unset($argv[0]);
 include 'functions.php';
 $nrk=new nrkripper;

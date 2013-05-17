@@ -12,15 +12,15 @@ else
 	foreach ($check as $command)
 	{
 		
-	$return=shell_exec("$command 2>&1"); //Prøv kommandoen
+	$return=shell_exec("$command 2>&1"); //PrÃ¸v kommandoen
 	//var_dump($return);
 	if(strpos($return,'not found'))
-		$notfound[]=$command; //Legg den på listen over kommandoer som ikke ble funnet
+		$notfound[]=$command; //Legg den pÃ¥ listen over kommandoer som ikke ble funnet
 	}
 	
 	if(count($notfound)>0)
 	{
-		$text="Følgende avhengigheter ble ikke funnet:$break";
+		$text="FÃ¸lgende avhengigheter ble ikke funnet:$break";
 		$text.=implode($break,$notfound);
 		die($text.$break);
 	}
