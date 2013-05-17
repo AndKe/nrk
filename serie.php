@@ -1,19 +1,15 @@
 <?Php
 include 'functions.php';
+$nrk=new nrkripper;
 depend('mkvmerge');
-
-$serier=array('http://tv.nrk.no/serie/saann-er-jeg-og-saann-er-det/msue11005111/22-12-2012');
+$serier=explode("\n",file_get_contents('serier.php')); //Hent liste over serier
 if(file_exists('sesonger unntak.txt'))
-	$unntak=explode("\r\n",file_get_contents('sesonger unntak.txt'));
-else
-	$unntak=array();
+	$unntak=explode("\n",str_replace("\r","",file_get_contents('sesonger unntak.txt'))); //Finn sesonger som ikke skal hentes
 
 foreach($serier as $url)
 {
-	$sesonger=episodelist($url);
-	//echo implode("\n",$episoder[3])."\n"; //Vis liste over episoder
-	//print_r($sesonger);
-	//die();
+	$url=trim($url); //sesonger.txt deles etter \n, hvis det er brukt \r\n fjernes \r her
+	$sesonger=$nrk->episodelist($url);
 	
 	foreach($sesonger as $sesongkey=>$sesong) //Gå gjennom sesongene
 	{
@@ -21,27 +17,25 @@ foreach($serier as $url)
 		preg_match('^(.+) .+^',$sesonger[0]['titler'][0],$serietittel);
 		$serietittel=html_entity_decode($serietittel[1]);
 		$outpath=$config['outpath'].filnavn($serietittel.' '.$sesong['sesongtittel']).'/';
-		if(array_search($serietittel.' '.$sesong['sesongtittel'],$unntak)!==false) //Sjekk om denne sesongen ikke skal rippes
+		if(isset($unntak) && array_search($serietittel.' '.$sesong['sesongtittel'],$unntak)!==false) //Sjekk om denne sesongen ikke skal rippes
 			continue;
 		foreach ($sesong['url'] as $episodekey=>$url) //Gå gjennom episodene i sesongen
 		{
-			$filnavn=filnavn($sesong['titler'][$episodekey]);
+			$filnavn=$nrk->filnavn($sesong['titler'][$episodekey]);
 			$tsfil=$outpath.$filnavn.'.ts';
 			$mkvfil=$outpath.$filnavn.'.mkv';
-			$episodedata=get($sesong['url'][$episodekey],false,false,$agent);
-			//echo $mkvfil."\n";
-			//echo var_dump(file_exists($mkvfil));
+			$episodedata=$nrk->get($sesong['url'][$episodekey]);
 			if(file_exists($outpath.$filnavn.'.mkv')) //Sjekk om episoden allerede er lastet ned
 			{
 				//echo "eksisterer\n";
-				if(varighetsjekk($episodedata,$mkvfil))
+				$nrk->sjekkfil($mkvfil,$nrk->varighet($episodedata));
+				if($nrk->varighetsjekk($episodedata,$mkvfil))
 				{
-					echo "".html_entity_decode($sesong['titler'][$episodekey])." er allerede lastet ned\n";
+					echo html_entity_decode($sesong['titler'][$episodekey])." er allerede lastet ned\n";
 					continue;
 				}
 				else
 				{
-					//die();
 					rename($tsfil,$tsfil.'.old');
 					rename($mkvfil,$mkvfil.'.old');
 				}
