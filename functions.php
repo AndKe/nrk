@@ -2,46 +2,65 @@
 class nrkripper
 {
 	private $ch;
+	public $config;
+	public $debug=false;
 	public $useragent='Mozilla/5.0 (iPhone; CPU iPhone OS 5_1 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko) Version/5.1 Mobile/9B176 Safari/7534.48.3';
 	public function __construct()
 	{
-		$this->ch=curl_init();	
+		$this->ch=curl_init();
 		curl_setopt($this->ch, CURLOPT_RETURNTRANSFER, 1);
 		curl_setopt($this->ch, CURLOPT_FOLLOWLOCATION, true);
 		curl_setopt($this->ch,CURLOPT_USERAGENT,$this->useragent);
 		curl_setopt($ch, CURLOPT_COOKIEFILE,'cookies.txt');
 		curl_setopt($ch, CURLOPT_COOKIEJAR,'cookies.txt');
-
+		include 'config.php';
+		$this->config=$config;
+		
+	}
+	public function nrkrip($url,$utmappe)
+	{
+		if(substr($utmappe,-1,1)!='/')
+			$utmappe.='/';
+		$data=$this->get($url); //Hent informasjon fra NRK
+		if(!$segmentlist=$this->segmentlist($data)); //Hent segmentliste
+			die("Feil ved henting av segmentliste\n");
+		$id=$this->getid($url); //Finn id
+		$tittel=$this->tittel($id); //Hent tittel
+		$filnavn=$this->filnavn($tittel); //Formater tittel for filnavn
+		$utfil=$utmappe.$filnavn; //Sett sammen utmappe og filnavn til utfil
+		$this->downloadts($segmentlist,$utfil); //Last ned ts
+		$this->mkvmerge($utfil);
+		$this->subtitle($id,$utfil);
 	}
 	public function get($url)
 	{
 		curl_setopt($this->ch,CURLOPT_URL,$url);
 		return curl_exec($this->ch);
 	}
-
-
-function title($id,$filename=true)
-{
-	$tip=$this->get($url='http://tv.nrk.no/programtooltip/'.$id);
-	if(preg_match('^\<h1\>.*\</h1\>^',$tip,$tipresult))
+	private function varighet($episodedata)
 	{
-		$name=strip_tags($tipresult[0]);
-		$name=html_entity_decode($name);
-		if($filename)
-			$name=str_replace(':','-',$name);
+		preg_match('^Varighet.+\<dd\>(.+)\</dd\>^',$episodedata,$varighet); //Hent varighet fra beskrivelsen
+		return $varighet[1];
 	}
-	else
-		$name=false;
-	
-	return $name;
-}
-function filnavn($tittel)
-{
-	$filnavn=html_entity_decode($tittel);
-	$filnavn=str_replace(':','-',$filnavn);
-	return $filnavn;
-}
-function getid($url)
+
+	public function tittel($id)
+	{
+		$tip=$this->get($url='http://tv.nrk.no/programtooltip/'.$id);
+		if(preg_match('^\<h1\>.*\</h1\>^',$tip,$tipresult))
+		{
+			$name=strip_tags($tipresult[0]);
+			return html_entity_decode($name);
+		}
+		else
+			return false;
+	}
+	private function filnavn($tittel)
+	{
+		$filnavn=html_entity_decode($tittel);
+		$filnavn=str_replace(':','-',$filnavn);
+		return $filnavn;
+	}
+private function getid($url)
 {
 	preg_match('^/([a-z]+[0-9]+/*)^',$url,$result);
 	if(!isset($result[1]))
@@ -53,43 +72,27 @@ function getid($url)
 	
 	return $result[1];
 }
-function segmentlist($data)
-{
-	preg_match('^="(.*)master.m3u8.*"^U',$data,$result); //Finn basisurl
-	if(!isset($result[1]))
-		$return=false;
-	else
-		$return=$this->get($result[1].'index_4_av.m3u8?null='); //Hent liste over segmenter
-	return $return;
-	
-}
-function download($segmentlist,$outfile,$showinfo=true) //$outfile skal være fullstendig bane med filnavn uten extension
-{
-	if(substr($segmentlist,0,4)=='http')
-		die("Baseurl skal ikke brukes");
-	
-	$tsfil=$outfile.'.ts';
-
-
-	preg_match_all('^.+segment.+^',$segmentlist,$segments); //Finn alle segmentene
-	$count=count($segments[0]);
-	//$out=$outpath.$outfile;
-	if(file_exists($tsfil)) 
+	private function segmentlist($data)
 	{
-		if(filesize($tsfil)==0) //Sjekk om filen er tom
-			unlink($tsfil);
-		else
-			die("$tsfil eksisterer\n");
+		preg_match('^="(.*)master.m3u8.*"^U',$data,$result); //Finn basisurl
+		if(!isset($result[1]))
+			return false;
 			
+		$return=$this->get($result[1].'index_4_av.m3u8?null='); //Hent liste over segmenter
+			
+		if(!preg_match_all('^.+segment.+^',$segmentlist,$segments)); //Finn alle segmentene
+			die("Ugylig segmentliste\n");
+		return $segments[0];		
 	}
-	
-	$file=fopen($tsfil.'.tmp','x'); //Åpne utfil for skriving
-	
-	if($file!==false) //Sjekk at filen lot seg åpne
+	private function downloadts($segmentlist,$utfil,$showinfo=true)
 	{
-		//$info="Laster ned til $outfile\n";
-	
-		foreach($segments[0] as $key=>$segment)
+
+		$count=count($segments);
+		
+		$file=fopen($utfil.'.tmp','x'); //Åpne utfil for skriving
+		if(!$file)
+			return false;
+		foreach($segments as $key=>$segment)
 		{
 			if($showinfo)
 			{
@@ -118,24 +121,19 @@ function download($segmentlist,$outfile,$showinfo=true) //$outfile skal være fu
 		}
 		echo "\n";
 		fclose($file); //Lukk utfilen
-		rename($tsfil.'.tmp',$tsfil);
-		$mkvfile=$outfile.'.mkv';
-		if(!file_exists($mkvfile))
-		{
-			if($showinfo)
-			echo "Lager mkv\n";
-			echo shell_exec("mkvmerge -o '$mkvfile' '$outfile.ts' 2>&1");
-		}
-			$return=$mkvfile;
-		
+		rename($utfil.'.tmp',$utfil.'.ts');	//Lag riktig filtype
+		return $utfil.'.ts';
 	}
-	else
-		$return=false;
-	//echo $info;
-	curl_close($ch);
-	return $return;
+public function mkvmerge($filnavn)
+{
+	echo "Lager mkv\n";
+	//$mkvfil=substr($tsfil,0,-2).'mkv'; //Fjern ts og legg til mkv
+	$mkvfil=$filnavn.'.mkv';
+	$tsfil=$filnavn.'.ts';
+	echo shell_exec("mkvmerge -o '$mkvfil' '$tsfil' 2>&1");
 }
-function subtitle($id,$filnavn) //$filnavn skal være fullstendig bane uten extension
+
+public function subtitle($id,$filnavn) //$filnavn skal være fullstendig bane uten extension
 {
 	require_once 'subconvert.php'; //Verktøy for å konvertere undertekster
 	$subconvert=new subconvert;
@@ -156,10 +154,12 @@ function subtitle($id,$filnavn) //$filnavn skal være fullstendig bane uten exte
 	return $return;
 	
 }
-function episodelist($data)
+public function episodelist($url)
 {
-	if(substr($data,0,4)=='http')
-		$data=$this->get($data);
+	if(substr($url,0,4)=='http')
+		$data=$this->get($url);
+	else
+		die("Ugyldig url: $url\n");
 		
 	preg_match_all('^(/program/Episodes.*)" title="(.*)"^U',$data,$sesongliste);
 	
@@ -188,16 +188,6 @@ function episodelist($data)
 	
 	return $sesonger;
 		
-}
-function varighetsjekk($episodedata,$fil)
-{
-	preg_match('^Varighet.+\<dd\>(.+)\</dd\>^',$episodedata,$varighet); //Hent varighet fra NRK
-
-	$dur=str_replace(array(' minutter',' minutt',' timer',' time',','),array('mn','minute','h','h',''),$varighet[1]); //Gjør om tidsangivelsen fra NRK til å være lik mediainfo
-	$mediainfo=trim(shell_exec($cmd="mediainfo --Inform=\"Video;%Duration/String%\" '$fil' 2>&1")); //Hent varighet fra mediainfo
-	$mediainfo=preg_replace('^(mn).*^','$1',$mediainfo);
-	echo "$dur==$mediainfo\n";
-	return $dur==$mediainfo;
 }
 }
 ?>
