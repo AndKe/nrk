@@ -1,18 +1,28 @@
 <?Php
-require_once 'get.php'; //cURL get function
-//require_once 'dependcheck.php'; //Sjekk avhengigheter
-require_once 'subconvert.php'; //Verktøy for å konvertere undertekster
+class nrkripper
+{
+	private $ch;
+	public $useragent='Mozilla/5.0 (iPhone; CPU iPhone OS 5_1 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko) Version/5.1 Mobile/9B176 Safari/7534.48.3';
+	public function __construct()
+	{
+		$this->ch=curl_init();	
+		curl_setopt($this->ch, CURLOPT_RETURNTRANSFER, 1);
+		curl_setopt($this->ch, CURLOPT_FOLLOWLOCATION, true);
+		curl_setopt($this->ch,CURLOPT_USERAGENT,$this->useragent);
+		curl_setopt($ch, CURLOPT_COOKIEFILE,'cookies.txt');
+		curl_setopt($ch, CURLOPT_COOKIEJAR,'cookies.txt');
 
-$agent='Mozilla/5.0 (iPhone; CPU iPhone OS 5_1 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko) Version/5.1 Mobile/9B176 Safari/7534.48.3';
+	}
+	public function get($url)
+	{
+		curl_setopt($this->ch,CURLOPT_URL,$url);
+		return curl_exec($this->ch);
+	}
 
-
-$config['outpath']="/home/NRK Webrip/";
 
 function title($id,$filename=true)
 {
-	global $agent;
-	$tip=get($url='http://tv.nrk.no/programtooltip/'.$id,false,false,$agent);
-	//var_dump($url);
+	$tip=$this->get($url='http://tv.nrk.no/programtooltip/'.$id);
 	if(preg_match('^\<h1\>.*\</h1\>^',$tip,$tipresult))
 	{
 		$name=strip_tags($tipresult[0]);
@@ -45,25 +55,16 @@ function getid($url)
 }
 function segmentlist($data)
 {
-	global $agent;
 	preg_match('^="(.*)master.m3u8.*"^U',$data,$result); //Finn basisurl
 	if(!isset($result[1]))
 		$return=false;
 	else
-		$return=get($result[1].'index_4_av.m3u8?null=',false,false,$agent); //Hent liste over segmenter
+		$return=$this->get($result[1].'index_4_av.m3u8?null='); //Hent liste over segmenter
 	return $return;
 	
 }
 function download($segmentlist,$outfile,$showinfo=true) //$outfile skal være fullstendig bane med filnavn uten extension
 {
-	global $agent;
-	$ch=curl_init();
-	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-	curl_setopt($ch, CURLOPT_COOKIEFILE,'cookies.txt');
-	curl_setopt($ch, CURLOPT_COOKIEJAR,'cookies.txt');
-	curl_setopt($ch,CURLOPT_USERAGENT,$agent);
-
 	if(substr($segmentlist,0,4)=='http')
 		die("Baseurl skal ikke brukes");
 	
@@ -95,26 +96,22 @@ function download($segmentlist,$outfile,$showinfo=true) //$outfile skal være fu
 				$num=$key+1;
 				echo "\rLaster ned segment $num av $count til $tsfil";
 			}
-			//$data=get($url=$baseurl.$segment,'cookies.txt',false,$agent);
-			curl_setopt($ch, CURLOPT_URL,$segment);
+			curl_setopt($this->ch, CURLOPT_URL,$segment);
 
 
 			$tries=0;
 			while($tries<3)
 			{
-				$data=curl_exec($ch);
+				$data=curl_exec($this->ch);
 
-				if (strlen($data)==curl_getinfo($ch,CURLINFO_CONTENT_LENGTH_DOWNLOAD))
+				if (strlen($data)==curl_getinfo($this->ch,CURLINFO_CONTENT_LENGTH_DOWNLOAD))
 					break;
 	
 				$tries++;
 				echo "\nFeil ved nedlasting av segment $num. Prøver på nytt for $tries. gang";
-		
-			
 			}
 			if($tries==3)
-				die("\nNedlasting feilet\n");
-			
+				die("\nNedlasting feilet etter $tries forsøk\n");
 			fwrite($file,$data);
 			
 		
@@ -140,24 +137,16 @@ function download($segmentlist,$outfile,$showinfo=true) //$outfile skal være fu
 }
 function subtitle($id,$filnavn) //$filnavn skal være fullstendig bane uten extension
 {
-	/*$tip=file_get_contents('http://tv.nrk.no/programtooltip/'.$id); //Hent tooltip
-	preg_match('^\<h1\>.*\</h1\>^',$tip,$tipresult); //Hent navnet på programmet fra tooltip
-	$name=strip_tags($tipresult[0]);
-	$name=str_replace(':','-',$name);
-	$name=html_entity_decode($name);*/
-//	$name=title($id);
-/*	if(substr($outdir,-1,1)!='/')
-		$outdir.='/';*/
+	require_once 'subconvert.php'; //Verktøy for å konvertere undertekster
 	$subconvert=new subconvert;
 	if(!file_exists($filnavn.".srt"))
 	{
 		$xml=file_get_contents('http://tv.nrk.no/programsubtitles/'.$id);
-		if(trim($xml)!='')
+		if(trim($xml)!='') //Sjekk at xml filen ikke er blank
 		{
-			file_put_contents($filnavn.".xml",$xml);
-			$srt=$subconvert->xmltosrt($xml);
-			file_put_contents($filnavn.".srt",$srt);
-			//copy('http://tv.nrk.no/programsubtitles/'.$id,$outdir."subs/$name.xml");
+			file_put_contents($filnavn.".xml",$xml); //Lagre underteksten i originalt xml format
+			$srt=$subconvert->xmltosrt($xml); //Konverter til srt
+			file_put_contents($filnavn.".srt",$srt); //Lagre srt fil
 			$return=$filnavn.".srt";
 		}
 		
@@ -169,20 +158,16 @@ function subtitle($id,$filnavn) //$filnavn skal være fullstendig bane uten exte
 }
 function episodelist($data)
 {
-		global $agent;
-		if(!isset($agent))
-			die('Finner ikke useragent');
 	if(substr($data,0,4)=='http')
-		$data=get($data,false,false,$agent);
+		$data=$this->get($data);
 		
 	preg_match_all('^(/program/Episodes.*)" title="(.*)"^U',$data,$sesongliste);
-	
 	
 	$episoder=array(array(),array(),array(),array());
 	foreach (array_unique($sesongliste[1]) as $seasonkey=>$seasonurl) //Gå gjennom url til sesongene
 	{
 		
-		$sesong=get($url='http://tv.nrk.no'.$seasonurl,false,false,$agent); //Hent liste over episodene i sesongen
+		$sesong=$this->get($url='http://tv.nrk.no'.$seasonurl); //Hent liste over episodene i sesongen
 		preg_match_all('^"(http://tv\.nrk\.no.*([a-z]{4}[0-9]{8}).*)"\>(.*)\<^U',$sesong,$sesongdata); //Finn alle episodene i sesongen
 		//print_r($episodertemp);
 	
@@ -204,7 +189,7 @@ function episodelist($data)
 	return $sesonger;
 		
 }
-function varighetsjekk($episodedata,$fil) //var_dump(varighetsjekk($episode,"{$config['outpath']}MGP jr norsk finale 2011 03.09.2011.mkv"));
+function varighetsjekk($episodedata,$fil)
 {
 	preg_match('^Varighet.+\<dd\>(.+)\</dd\>^',$episodedata,$varighet); //Hent varighet fra NRK
 
@@ -213,5 +198,6 @@ function varighetsjekk($episodedata,$fil) //var_dump(varighetsjekk($episode,"{$c
 	$mediainfo=preg_replace('^(mn).*^','$1',$mediainfo);
 	echo "$dur==$mediainfo\n";
 	return $dur==$mediainfo;
+}
 }
 ?>

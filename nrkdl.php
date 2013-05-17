@@ -1,8 +1,8 @@
 ﻿<?Php
-$urllist=array('http://tv.nrk.no/program/koif45002411/mordene-i-fjallbacka-venner-for-livet','http://tv.nrk.no/serie/puls/mdhp12001113/11-03-2013','http://tv.nrk.no/serie/puls/mdhp12001513/08-04-2013');
-
+unset($argv[0]);
 include 'functions.php';
-foreach ($urllist as $url)
+$nrk=new nrkripper;
+foreach ($argv as $url)
 {
 	$data=get($url,false,false,$agent); //Hent data om episoden
 	$outfile=$config['outpath'].title(getid($url));
