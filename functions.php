@@ -3,7 +3,7 @@ class nrkripper
 {
 	private $ch;
 	public $config;
-	public $debug=false;
+	public $silent=false;
 	public $useragent='Mozilla/5.0 (iPhone; CPU iPhone OS 5_1 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko) Version/5.1 Mobile/9B176 Safari/7534.48.3';
 	public function __construct()
 	{
@@ -11,9 +11,9 @@ class nrkripper
 		curl_setopt($this->ch, CURLOPT_RETURNTRANSFER, 1);
 		curl_setopt($this->ch, CURLOPT_FOLLOWLOCATION, true);
 		curl_setopt($this->ch,CURLOPT_USERAGENT,$this->useragent);
-		curl_setopt($ch, CURLOPT_COOKIEFILE,'cookies.txt');
-		curl_setopt($ch, CURLOPT_COOKIEJAR,'cookies.txt');
-		include 'config.php';
+		curl_setopt($this->ch, CURLOPT_COOKIEFILE,'cookies.txt');
+		curl_setopt($this->ch, CURLOPT_COOKIEJAR,'cookies.txt');
+		require 'config.php';
 		$this->config=$config;
 		
 	}
@@ -22,14 +22,19 @@ class nrkripper
 		if(substr($utmappe,-1,1)!='/')
 			$utmappe.='/';
 		$data=$this->get($url); //Hent informasjon fra NRK
-		if(!$segmentlist=$this->segmentlist($data)); //Hent segmentliste
+		if(!$segmentlist=$this->segmentlist($data)) //Hent segmentliste
 			die("Feil ved henting av segmentliste\n");
 		$id=$this->getid($url); //Finn id
 		$tittel=$this->tittel($id); //Hent tittel
 		$filnavn=$this->filnavn($tittel); //Formater tittel for filnavn
+		
+		include 'filsjekk.php';
+		$sjekk=new filsjekk;
 		$utfil=$utmappe.$filnavn; //Sett sammen utmappe og filnavn til utfil
-		$this->downloadts($segmentlist,$utfil); //Last ned ts
-		$this->mkvmerge($utfil);
+		$sjekk->sjekkfil($utfil.'.ts',$this->varighet($data));
+		
+		$tsfil=$this->downloadts($segmentlist,$utfil); //Last ned ts
+		$this->mkvmerge($tsfil);
 		$this->subtitle($id,$utfil);
 	}
 	public function get($url)
@@ -60,44 +65,38 @@ class nrkripper
 		$filnavn=str_replace(':','-',$filnavn);
 		return $filnavn;
 	}
-private function getid($url)
-{
-	preg_match('^/([a-z]+[0-9]+/*)^',$url,$result);
-	if(!isset($result[1]))
+	private function getid($url)
 	{
-		echo "Finner ikke id i url: $url\n";
-		$result[1]=false;
-		die();
+		preg_match('^/([a-z]+[0-9]+/*)^',$url,$result);
+		if(!isset($result[1]))
+			die("Finner ikke id i url: $url\n");
+		else
+			return $result[1];
 	}
-	
-	return $result[1];
-}
 	private function segmentlist($data)
 	{
 		preg_match('^="(.*)master.m3u8.*"^U',$data,$result); //Finn basisurl
 		if(!isset($result[1]))
 			return false;
 			
-		$return=$this->get($result[1].'index_4_av.m3u8?null='); //Hent liste over segmenter
+		$segmentlist=$this->get($result[1].'index_4_av.m3u8?null='); //Hent liste over segmenter
 			
-		if(!preg_match_all('^.+segment.+^',$segmentlist,$segments)); //Finn alle segmentene
+		if(!preg_match_all('^.+segment.+^',$segmentlist,$segments)) //Finn alle segmentene
 			die("Ugylig segmentliste\n");
 		return $segments[0];		
 	}
-	private function downloadts($segmentlist,$utfil,$showinfo=true)
+	private function downloadts($segments,$utfil)
 	{
-
 		$count=count($segments);
-		
 		$file=fopen($utfil.'.tmp','x'); //Åpne utfil for skriving
 		if(!$file)
 			return false;
 		foreach($segments as $key=>$segment)
 		{
-			if($showinfo)
+			if(!$this->silent)
 			{
 				$num=$key+1;
-				echo "\rLaster ned segment $num av $count til $tsfil";
+				echo "\rLaster ned segment $num av $count til $utfil";
 			}
 			curl_setopt($this->ch, CURLOPT_URL,$segment);
 
@@ -127,10 +126,9 @@ private function getid($url)
 public function mkvmerge($filnavn)
 {
 	echo "Lager mkv\n";
-	//$mkvfil=substr($tsfil,0,-2).'mkv'; //Fjern ts og legg til mkv
-	$mkvfil=$filnavn.'.mkv';
-	$tsfil=$filnavn.'.ts';
-	echo shell_exec("mkvmerge -o '$mkvfil' '$tsfil' 2>&1");
+	$pathinfo=pathinfo($filnavn);
+	$mkvfil=$pathinfo['dirname'].'/'.$pathinfo['filename'].'.mkv';
+	echo shell_exec("mkvmerge -o '$mkvfil' '$filnavn' 2>&1");
 }
 
 public function subtitle($id,$filnavn) //$filnavn skal være fullstendig bane uten extension
@@ -175,17 +173,7 @@ public function episodelist($url)
 		$sesonger[$seasonkey]['id']=$sesongdata[2];
 		$sesonger[$seasonkey]['titler']=$sesongdata[3];
 		$sesonger[$seasonkey]['sesongtittel']=str_replace('Vis programmer fra ','',array_unique($sesongliste[2])[$seasonkey]); //Denne måten å håndtere den returnerte verdien er gyldig kode fra PHP 5.4
-		
-		//die();
-	/*	foreach ($episoder as $key=>$value)
-		{
-			//$episoder[$key]=array_merge($episoder[$key],$episodertemp[$key]); //Merge arrayet for gjeldende sesong med resten av sesongene
-			$episoder[$seasonkey][$key]=array_merge($episoder[$key],$episodertemp[$key]); //Merge arrayet for gjeldende sesong med resten av sesongene
-	
-		}*/
 	}
-	//$episoder[4]=array_unique($sesongliste[2]);
-	
 	return $sesonger;
 		
 }
