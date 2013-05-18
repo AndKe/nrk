@@ -15,9 +15,8 @@ class nrkripper
 		curl_setopt($this->ch, CURLOPT_COOKIEJAR,'cookies.txt');
 		require 'config.php';
 		$this->config=$config;
-		
 	}
-	public function nrkrip($url,$utmappe)
+	public function nrkrip($url,$utmappe) //Dette er funksjonen som kalles for å rippe
 	{
 		if(substr($utmappe,-1,1)!='/')
 			$utmappe.='/';
@@ -31,24 +30,31 @@ class nrkripper
 		include 'filsjekk.php';
 		$sjekk=new filsjekk;
 		$utfil=$utmappe.$filnavn; //Sett sammen utmappe og filnavn til utfil
-		$sjekk->sjekkfil($utfil.'.ts',$this->varighet($data));
+		$sjekk->sjekkfil($utfil,$this->varighet($data));
 		
 		$tsfil=$this->downloadts($segmentlist,$utfil); //Last ned ts
 		$this->mkvmerge($tsfil);
 		$this->subtitle($id,$utfil);
 	}
-	public function get($url)
+	private function get($url)
 	{
 		curl_setopt($this->ch,CURLOPT_URL,$url);
 		return curl_exec($this->ch);
 	}
-	private function varighet($episodedata)
+	//Funksjoner som heter info fra NRK
+	private function segmentlist($data)
 	{
-		preg_match('^Varighet.+\<dd\>(.+)\</dd\>^',$episodedata,$varighet); //Hent varighet fra beskrivelsen
-		return $varighet[1];
+		preg_match('^="(.*)master.m3u8.*"^U',$data,$result); //Finn basisurl
+		if(!isset($result[1]))
+			return false;
+			
+		$segmentlist=$this->get($result[1].'index_4_av.m3u8?null='); //Hent liste over segmenter
+			
+		if(!preg_match_all('^.+segment.+^',$segmentlist,$segments)) //Finn alle segmentene
+			die("Ugylig segmentliste\n");
+		return $segments[0];		
 	}
-
-	public function tittel($id)
+	public function tittel($id) //Hent tittel fra tooltip hos NRK
 	{
 		$tip=$this->get($url='http://tv.nrk.no/programtooltip/'.$id);
 		if(preg_match('^\<h1\>.*\</h1\>^',$tip,$tipresult))
@@ -59,6 +65,36 @@ class nrkripper
 		else
 			return false;
 	}
+	private function varighet($episodedata) //Hent varighet fra beskrivelsen
+	{
+		preg_match('^Varighet.+\<dd\>(.+)\</dd\>^',$episodedata,$varighet); 
+		return $varighet[1];
+	}
+	public function episodelist($url) //Hent episoder av en serie
+	{
+		if(substr($url,0,4)=='http')
+			$data=$this->get($url);
+		else
+			die("Ugyldig url: $url\n");
+			
+		preg_match_all('^(/program/Episodes.*)" title="(.*)"^U',$data,$sesongliste);
+		
+		$episoder=array(array(),array(),array(),array());
+		foreach (array_unique($sesongliste[1]) as $seasonkey=>$seasonurl) //Gå gjennom url til sesongene
+		{
+			
+			$sesong=$this->get($url='http://tv.nrk.no'.$seasonurl); //Hent liste over episodene i sesongen
+			preg_match_all('^"(http://tv\.nrk\.no.*([a-z]{4}[0-9]{8}).*)"\>(.*)\<^U',$sesong,$sesongdata); //Finn alle episodene i sesongen
+			//print_r($episodertemp);
+		
+			$sesonger[$seasonkey]['url']=$sesongdata[1];
+			$sesonger[$seasonkey]['id']=$sesongdata[2];
+			$sesonger[$seasonkey]['titler']=$sesongdata[3];
+			$sesonger[$seasonkey]['sesongtittel']=str_replace('Vis programmer fra ','',array_unique($sesongliste[2])[$seasonkey]); //Denne måten å håndtere den returnerte verdien er gyldig kode fra PHP 5.4
+		}
+		return $sesonger;		
+	}
+	//Funksjoner som behandler informasjonen
 	private function filnavn($tittel)
 	{
 		$filnavn=html_entity_decode($tittel);
@@ -73,18 +109,7 @@ class nrkripper
 		else
 			return $result[1];
 	}
-	private function segmentlist($data)
-	{
-		preg_match('^="(.*)master.m3u8.*"^U',$data,$result); //Finn basisurl
-		if(!isset($result[1]))
-			return false;
-			
-		$segmentlist=$this->get($result[1].'index_4_av.m3u8?null='); //Hent liste over segmenter
-			
-		if(!preg_match_all('^.+segment.+^',$segmentlist,$segments)) //Finn alle segmentene
-			die("Ugylig segmentliste\n");
-		return $segments[0];		
-	}
+	//Funksjoner som henter data fra NRK
 	private function downloadts($segments,$utfil)
 	{
 		$count=count($segments);
@@ -99,8 +124,6 @@ class nrkripper
 				echo "\rLaster ned segment $num av $count til $utfil";
 			}
 			curl_setopt($this->ch, CURLOPT_URL,$segment);
-
-
 			$tries=0;
 			while($tries<3)
 			{
@@ -115,67 +138,40 @@ class nrkripper
 			if($tries==3)
 				die("\nNedlasting feilet etter $tries forsøk\n");
 			fwrite($file,$data);
-			
-		
 		}
 		echo "\n";
 		fclose($file); //Lukk utfilen
 		rename($utfil.'.tmp',$utfil.'.ts');	//Lag riktig filtype
 		return $utfil.'.ts';
 	}
-public function mkvmerge($filnavn)
-{
-	echo "Lager mkv\n";
-	$pathinfo=pathinfo($filnavn);
-	$mkvfil=$pathinfo['dirname'].'/'.$pathinfo['filename'].'.mkv';
-	echo shell_exec("mkvmerge -o '$mkvfil' '$filnavn' 2>&1");
-}
-
-public function subtitle($id,$filnavn) //$filnavn skal være fullstendig bane uten extension
-{
-	require_once 'subconvert.php'; //Verktøy for å konvertere undertekster
-	$subconvert=new subconvert;
-	if(!file_exists($filnavn.".srt"))
+	public function subtitle($id,$filnavn) //$filnavn skal være fullstendig bane uten extension
 	{
-		$xml=file_get_contents('http://tv.nrk.no/programsubtitles/'.$id);
-		if(trim($xml)!='') //Sjekk at xml filen ikke er blank
+		require_once 'subconvert.php'; //Verktøy for å konvertere undertekster
+		$subconvert=new subconvert;
+		if(!file_exists($filnavn.".srt"))
 		{
-			file_put_contents($filnavn.".xml",$xml); //Lagre underteksten i originalt xml format
-			$srt=$subconvert->xmltosrt($xml); //Konverter til srt
-			file_put_contents($filnavn.".srt",$srt); //Lagre srt fil
-			$return=$filnavn.".srt";
+			$xml=file_get_contents('http://tv.nrk.no/programsubtitles/'.$id);
+			if(trim($xml)!='') //Sjekk at xml filen ikke er blank
+			{
+				file_put_contents($filnavn.".xml",$xml); //Lagre underteksten i originalt xml format
+				$srt=$subconvert->xmltosrt($xml); //Konverter til srt
+				file_put_contents($filnavn.".srt",$srt); //Lagre srt fil
+				$return=$filnavn.".srt";
+			}
+			
 		}
+		else
+			$return=false;
+		return $return;
 		
 	}
-	else
-		$return=false;
-	return $return;
 	
-}
-public function episodelist($url)
-{
-	if(substr($url,0,4)=='http')
-		$data=$this->get($url);
-	else
-		die("Ugyldig url: $url\n");
-		
-	preg_match_all('^(/program/Episodes.*)" title="(.*)"^U',$data,$sesongliste);
-	
-	$episoder=array(array(),array(),array(),array());
-	foreach (array_unique($sesongliste[1]) as $seasonkey=>$seasonurl) //Gå gjennom url til sesongene
+	public function mkvmerge($filnavn)
 	{
-		
-		$sesong=$this->get($url='http://tv.nrk.no'.$seasonurl); //Hent liste over episodene i sesongen
-		preg_match_all('^"(http://tv\.nrk\.no.*([a-z]{4}[0-9]{8}).*)"\>(.*)\<^U',$sesong,$sesongdata); //Finn alle episodene i sesongen
-		//print_r($episodertemp);
-	
-		$sesonger[$seasonkey]['url']=$sesongdata[1];
-		$sesonger[$seasonkey]['id']=$sesongdata[2];
-		$sesonger[$seasonkey]['titler']=$sesongdata[3];
-		$sesonger[$seasonkey]['sesongtittel']=str_replace('Vis programmer fra ','',array_unique($sesongliste[2])[$seasonkey]); //Denne måten å håndtere den returnerte verdien er gyldig kode fra PHP 5.4
+		echo "Lager mkv\n";
+		$pathinfo=pathinfo($filnavn);
+		$mkvfil=$pathinfo['dirname'].'/'.$pathinfo['filename'].'.mkv';
+		echo shell_exec("mkvmerge -o '$mkvfil' '$filnavn' 2>&1");
 	}
-	return $sesonger;
-		
-}
 }
 ?>

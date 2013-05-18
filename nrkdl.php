@@ -4,6 +4,6 @@ include 'functions.php';
 $nrk=new nrkripper;
 foreach ($argv as $url)
 {
-	$nrk->nrkrip($url,$nrk->$config['outpath']);	
+	$nrk->nrkrip($url,$nrk->config['outpath']);	
 }
 ?>
