@@ -2,6 +2,7 @@
 class filsjekk
 {
 	public $varighettoleranse=90;
+	public $error;
 	private function varighetsjekk($varighet,$fil)
 	{
 		
@@ -35,6 +36,7 @@ class filsjekk
 				rename($fil,$fil.".feil_varighet");
 			else
 				return true; //Ingen problemer funnet
+			$this->error.="Fil eksisterer og har riktig lengde\n";
 			return false; //Problemer er funnet
 		}
 		else

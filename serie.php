@@ -1,8 +1,7 @@
 <?Php
 include 'functions.php';
 $nrk=new nrkripper;
-depend('mkvmerge');
-$serier=explode("\n",file_get_contents('serier.php')); //Hent liste over serier
+$serier=explode("\n",trim(file_get_contents('serier.txt'))); //Hent liste over serier
 if(file_exists('sesonger unntak.txt'))
 	$unntak=explode("\n",str_replace("\r","",file_get_contents('sesonger unntak.txt'))); //Finn sesonger som ikke skal hentes
 
@@ -13,14 +12,22 @@ foreach($serier as $url)
 	
 	foreach($sesonger as $sesongkey=>$sesong) //Gå gjennom sesongene
 	{
-
 		preg_match('^(.+) .+^',$sesonger[0]['titler'][0],$serietittel);
 		$serietittel=html_entity_decode($serietittel[1]);
-		$outpath=$config['outpath'].filnavn($serietittel.' '.$sesong['sesongtittel']).'/';
+		$outpath=$nrk->config['outpath'].$nrk->filnavn($serietittel.' '.$sesong['sesongtittel']).'/';
 		if(isset($unntak) && array_search($serietittel.' '.$sesong['sesongtittel'],$unntak)!==false) //Sjekk om denne sesongen ikke skal rippes
 			continue;
+		if(!file_exists($outpath))
+			mkdir($outpath,0777,true);	
 		foreach ($sesong['url'] as $episodekey=>$url) //Gå gjennom episodene i sesongen
 		{
+			var_dump($url);
+			var_dump($outpath);
+			var_dump($nrk->nrkrip($url,$outpath));
+			echo $nrk->error;
+			echo $nrk->sjekk->error;
+
+			/*die($url."\n");
 			$filnavn=$nrk->filnavn($sesong['titler'][$episodekey]);
 			$tsfil=$outpath.$filnavn.'.ts';
 			$mkvfil=$outpath.$filnavn.'.mkv';
@@ -59,14 +66,13 @@ foreach($serier as $url)
 				
 				download($segmentlist,$outpath.$filnavn); //Last ned episoden
 				subtitle($sesong['id'][$episodekey],$outpath.$filnavn); //Hent undertekst
-			}
+			}*/
 			}
 		
 	}
 	
 	unset($mkvfile,$episoder);
 }
-
 
 
 //print_r($episoder);

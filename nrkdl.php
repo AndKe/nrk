@@ -4,6 +4,7 @@ include 'functions.php';
 $nrk=new nrkripper;
 foreach ($argv as $url)
 {
-	$nrk->nrkrip($url,$nrk->config['outpath']);	
+	if(!$nrk->nrkrip($url,$nrk->config['outpath']))
+		echo "Kunne ikke laste ned fra $url\n";
 }
 ?>

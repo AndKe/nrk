@@ -5,6 +5,8 @@ class nrkripper
 	public $config;
 	public $silent=false;
 	public $useragent='Mozilla/5.0 (iPhone; CPU iPhone OS 5_1 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko) Version/5.1 Mobile/9B176 Safari/7534.48.3';
+	public $sjekk;
+	public $error;
 	public function __construct()
 	{
 		$this->ch=curl_init();
@@ -15,6 +17,8 @@ class nrkripper
 		curl_setopt($this->ch, CURLOPT_COOKIEJAR,'cookies.txt');
 		require 'config.php';
 		$this->config=$config;
+		include 'filsjekk.php';
+		$this->sjekk=new filsjekk;
 	}
 	public function nrkrip($url,$utmappe) //Dette er funksjonen som kalles for å rippe
 	{
@@ -22,15 +26,14 @@ class nrkripper
 			$utmappe.='/';
 		$data=$this->get($url); //Hent informasjon fra NRK
 		if(!$segmentlist=$this->segmentlist($data)) //Hent segmentliste
-			die("Feil ved henting av segmentliste\n");
+			return false; //Hvis det ikke er mulig å laste ned programmet, returner false
 		$id=$this->getid($url); //Finn id
 		$tittel=$this->tittel($id); //Hent tittel
 		$filnavn=$this->filnavn($tittel); //Formater tittel for filnavn
 		
-		include 'filsjekk.php';
-		$sjekk=new filsjekk;
 		$utfil=$utmappe.$filnavn; //Sett sammen utmappe og filnavn til utfil
-		$sjekk->sjekkfil($utfil,$this->varighet($data));
+		if(!$this->sjekk->sjekkfil($utfil.'.ts',$this->varighet($data)))
+			return false;
 		
 		$tsfil=$this->downloadts($segmentlist,$utfil); //Last ned ts
 		$this->mkvmerge($tsfil);
@@ -45,9 +48,11 @@ class nrkripper
 	private function segmentlist($data)
 	{
 		preg_match('^="(.*)master.m3u8.*"^U',$data,$result); //Finn basisurl
-		if(!isset($result[1]))
+		if(!isset($result[1])) //Sjekk om det ble funnet en url
+		{
+			$this->error.="Finner ikke segmentliste\n";
 			return false;
-			
+		}
 		$segmentlist=$this->get($result[1].'index_4_av.m3u8?null='); //Hent liste over segmenter
 			
 		if(!preg_match_all('^.+segment.+^',$segmentlist,$segments)) //Finn alle segmentene
@@ -63,7 +68,10 @@ class nrkripper
 			return html_entity_decode($name);
 		}
 		else
+		{
+			$this->error.="Finner ikke tittel\n";
 			return false;
+		}
 	}
 	private function varighet($episodedata) //Hent varighet fra beskrivelsen
 	{
@@ -75,7 +83,7 @@ class nrkripper
 		if(substr($url,0,4)=='http')
 			$data=$this->get($url);
 		else
-			die("Ugyldig url: $url\n");
+			die("Ugyldig url til serie: $url\n");
 			
 		preg_match_all('^(/program/Episodes.*)" title="(.*)"^U',$data,$sesongliste);
 		
@@ -95,7 +103,7 @@ class nrkripper
 		return $sesonger;		
 	}
 	//Funksjoner som behandler informasjonen
-	private function filnavn($tittel)
+	public function filnavn($tittel)
 	{
 		$filnavn=html_entity_decode($tittel);
 		$filnavn=str_replace(':','-',$filnavn);
@@ -156,13 +164,16 @@ class nrkripper
 				file_put_contents($filnavn.".xml",$xml); //Lagre underteksten i originalt xml format
 				$srt=$subconvert->xmltosrt($xml); //Konverter til srt
 				file_put_contents($filnavn.".srt",$srt); //Lagre srt fil
-				$return=$filnavn.".srt";
+				return $filnavn.".srt";
 			}
-			
+			else
+			{
+				$this->error.="Ingen undertekster til $id\n";
+				return false;	
+			}
 		}
 		else
-			$return=false;
-		return $return;
+			return false;
 		
 	}
 	
