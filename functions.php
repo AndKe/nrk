@@ -7,6 +7,7 @@ class nrkripper
 	public $useragent='Mozilla/5.0 (iPhone; CPU iPhone OS 5_1 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko) Version/5.1 Mobile/9B176 Safari/7534.48.3';
 	public $sjekk;
 	public $error;
+	public $tittel;
 	public function __construct()
 	{
 		$this->ch=curl_init();
@@ -28,15 +29,16 @@ class nrkripper
 		if(!$segmentlist=$this->segmentlist($data)) //Hent segmentliste
 			return false; //Hvis det ikke er mulig å laste ned programmet, returner false
 		$id=$this->getid($url); //Finn id
-		$tittel=$this->tittel($id); //Hent tittel
-		$filnavn=$this->filnavn($tittel); //Formater tittel for filnavn
+		$this->tittel=$this->finntittel($id); //Hent tittel
+		$filnavn=$this->filnavn($this->tittel); //Formater tittel for filnavn
 		
 		$utfil=$utmappe.$filnavn; //Sett sammen utmappe og filnavn til utfil
-		if(!$this->sjekk->sjekkfil($utfil.'.ts',$this->varighet($data)))
-			return false;
-		
-		$tsfil=$this->downloadts($segmentlist,$utfil); //Last ned ts
-		$this->mkvmerge($tsfil);
+		if($this->sjekk->sjekkfil($utfil.'.ts',$this->varighet($data))) //Sjekk om filen allerede er lastet ned
+			$this->error.="{$this->tittel} er allerede lastet ned\n";
+		else
+			$tsfil=$this->downloadts($segmentlist,$utfil); //Last ned ts
+		if(!$this->sjekk->sjekkfil($utfil.'.mkv',$this->varighet($data))) //Sjekk om filen allerede er muxet
+			$this->mkvmerge($tsfil);
 		$this->subtitle($id,$utfil);
 	}
 	private function get($url)
@@ -50,7 +52,7 @@ class nrkripper
 		preg_match('^="(.*)master.m3u8.*"^U',$data,$result); //Finn basisurl
 		if(!isset($result[1])) //Sjekk om det ble funnet en url
 		{
-			$this->error.="Finner ikke segmentliste\n";
+			$this->error.="Finner ikke segmentliste for {$this->tittel}\n";
 			return false;
 		}
 		$segmentlist=$this->get($result[1].'index_4_av.m3u8?null='); //Hent liste over segmenter
@@ -59,7 +61,7 @@ class nrkripper
 			die("Ugylig segmentliste\n");
 		return $segments[0];		
 	}
-	public function tittel($id) //Hent tittel fra tooltip hos NRK
+	public function finntittel($id) //Hent tittel fra tooltip hos NRK
 	{
 		$tip=$this->get($url='http://tv.nrk.no/programtooltip/'.$id);
 		if(preg_match('^\<h1\>.*\</h1\>^',$tip,$tipresult))
@@ -121,6 +123,9 @@ class nrkripper
 	private function downloadts($segments,$utfil)
 	{
 		$count=count($segments);
+		if(file_exists($utfil.'.tmp'))
+			unlink($utfil.'.tmp');
+		
 		$file=fopen($utfil.'.tmp','x'); //Åpne utfil for skriving
 		if(!$file)
 			return false;
@@ -129,7 +134,7 @@ class nrkripper
 			if(!$this->silent)
 			{
 				$num=$key+1;
-				echo "\rLaster ned segment $num av $count til $utfil";
+				echo "\rLaster ned segment $num av $count til $utfil   ";
 			}
 			curl_setopt($this->ch, CURLOPT_URL,$segment);
 			$tries=0;

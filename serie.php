@@ -14,6 +14,7 @@ foreach($serier as $url)
 	{
 		preg_match('^(.+) .+^',$sesonger[0]['titler'][0],$serietittel);
 		$serietittel=html_entity_decode($serietittel[1]);
+		echo $serietittel.' '.$sesong['sesongtittel']."\n";
 		$outpath=$nrk->config['outpath'].$nrk->filnavn($serietittel.' '.$sesong['sesongtittel']).'/'; //Lag mappenavn for sesongen
 		if(isset($unntak) && array_search($serietittel.' '.$sesong['sesongtittel'],$unntak)!==false) //Sjekk om denne sesongen ikke skal rippes
 			continue;
@@ -21,11 +22,13 @@ foreach($serier as $url)
 			mkdir($outpath,0777,true);	
 		foreach ($sesong['url'] as $episodekey=>$url) //Gå gjennom episodene i sesongen
 		{
-			var_dump($url);
-			var_dump($outpath);
-			var_dump($nrk->nrkrip($url,$outpath));
-			echo $nrk->error;
-			echo $nrk->sjekk->error;
+			
+			$status=$nrk->nrkrip($url,$outpath);
+			if($status!==false)
+				var_dump($status);
+			else
+				echo $nrk->error;
+			//echo $nrk->sjekk->error;
 		}
 	}	
 }

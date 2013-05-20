@@ -31,16 +31,25 @@ class filsjekk
 		if(file_exists($fil)) 
 		{
 			if(filesize($fil)==0) //Sjekk om filen er tom
+			{
+				$this->error.="Tom fil\n";
 				unlink($fil);
+				return false;
+			}
 			elseif(!$this->varighetsjekk($varighet,$fil))
+			{
+				$this->error.="Feil varighet\n";
 				rename($fil,$fil.".feil_varighet");
+				return false;
+			}
 			else
-				return true; //Ingen problemer funnet
-			$this->error.="Fil eksisterer og har riktig lengde\n";
-			return false; //Problemer er funnet
+			{
+				$this->error.="Fil eksisterer og har riktig lengde\n";
+				return true; //Filen eksisterer og har riktig lengde
+			}
 		}
 		else
-			return true;
+			return false; //Filen eksisterer ikke
 		
 	}
 }
