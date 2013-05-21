@@ -5,7 +5,8 @@ class filsjekk
 	public $error;
 	private function varighetsjekk($varighet,$fil)
 	{
-		
+		if(PHP_OS=='WINNT') //Denne funksjonen virker foreløpig ikke i windows
+			return true; 
 		$varighet=str_replace(array(' minutter',' minutt',' timer',' time',','),array('minutes','minute','hours','hour',' '),$varighet); //Gjør om tidsangivelsen fra NRK så den kan brukes med strtotime
 		$mediainfo=trim(shell_exec($cmd="mediainfo --Inform=\"Video;%Duration%\" '$fil' 2>&1")); //Hent varighet fra mediainfo
 		$mediainfo=$mediainfo/1000;

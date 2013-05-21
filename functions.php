@@ -26,19 +26,19 @@ class nrkripper
 		if(substr($utmappe,-1,1)!='/')
 			$utmappe.='/';
 		$data=$this->get($url); //Hent informasjon fra NRK
-		if(!$segmentlist=$this->segmentlist($data)) //Hent segmentliste
-			return false; //Hvis det ikke er mulig å laste ned programmet, returner false
 		$id=$this->getid($url); //Finn id
 		$this->tittel=$this->finntittel($id); //Hent tittel
+		if(!$segmentlist=$this->segmentlist($data)) //Hent segmentliste
+			return false; //Hvis det ikke er mulig å laste ned programmet, returner false
 		$filnavn=$this->filnavn($this->tittel); //Formater tittel for filnavn
 		
 		$utfil=$utmappe.$filnavn; //Sett sammen utmappe og filnavn til utfil
 		if($this->sjekk->sjekkfil($utfil.'.ts',$this->varighet($data))) //Sjekk om filen allerede er lastet ned
 			$this->error.="{$this->tittel} er allerede lastet ned\n";
 		else
-			$tsfil=$this->downloadts($segmentlist,$utfil); //Last ned ts
+			$this->downloadts($segmentlist,$utfil); //Last ned ts
 		if(!$this->sjekk->sjekkfil($utfil.'.mkv',$this->varighet($data))) //Sjekk om filen allerede er muxet
-			$this->mkvmerge($tsfil);
+			$this->mkvmerge($utfil.'.ts');
 		$this->subtitle($id,$utfil);
 	}
 	private function get($url)
@@ -128,7 +128,7 @@ class nrkripper
 		
 		$file=fopen($utfil.'.tmp','x'); //Åpne utfil for skriving
 		if(!$file)
-			return false;
+			die("Kan ikke åpne $utfil.tmp\n");
 		foreach($segments as $key=>$segment)
 		{
 			if(!$this->silent)
@@ -187,7 +187,7 @@ class nrkripper
 		echo "Lager mkv\n";
 		$pathinfo=pathinfo($filnavn);
 		$mkvfil=$pathinfo['dirname'].'/'.$pathinfo['filename'].'.mkv';
-		echo shell_exec("mkvmerge -o '$mkvfil' '$filnavn' 2>&1");
+		echo shell_exec("mkvmerge -o \"$mkvfil\" \"$filnavn\" 2>&1");
 	}
 }
 ?>
