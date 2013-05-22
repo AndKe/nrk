@@ -17,6 +17,8 @@ class nrkripper
 		curl_setopt($this->ch, CURLOPT_COOKIEFILE,'cookies.txt');
 		curl_setopt($this->ch, CURLOPT_COOKIEJAR,'cookies.txt');
 		require 'config.php';
+		if(substr($config['outpath'],-1,1)!='/') //Outpath må slutte med /
+			$config['outpath'].='/';
 		$this->config=$config;
 		include 'filsjekk.php';
 		$this->sjekk=new filsjekk;
@@ -44,7 +46,10 @@ class nrkripper
 	private function get($url)
 	{
 		curl_setopt($this->ch,CURLOPT_URL,$url);
-		return curl_exec($this->ch);
+		$result=curl_exec($this->ch);
+		if($result===false) //Hvis curl returnerer false er noe galt
+			die("Kunne ikke hente data fra NRK, sjekk internettforbindelsen\n");
+		return $result;
 	}
 	//Funksjoner som heter info fra NRK
 	private function segmentlist($data)
