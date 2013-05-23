@@ -1,4 +1,5 @@
 <?Php
+chdir(dirname(realpath(__FILE__))); //Bytt til mappen scriptet ligger i så relative filbaner blir riktige
 include 'functions.php';
 $nrk=new nrkripper;
 $serier=explode("\n",trim(file_get_contents('serier.txt'))); //Hent liste over serier
@@ -8,7 +9,7 @@ if(file_exists('sesonger unntak.txt'))
 foreach($serier as $url)
 {
 	$url=trim($url); //sesonger.txt deles etter \n, hvis det er brukt \r\n fjernes \r her
-	$sesonger=$nrk->episodelist($url);
+	$sesonger=$nrk->episodelist($url); //Hent sesongene og episodene i serien
 	
 	foreach($sesonger as $sesongkey=>$sesong) //Gå gjennom sesongene
 	{
