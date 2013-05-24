@@ -4,7 +4,6 @@ class nrkripper
 	private $ch;
 	public $config;
 	public $silent=false;
-	public $useragent='Mozilla/5.0 (iPhone; CPU iPhone OS 5_1 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko) Version/5.1 Mobile/9B176 Safari/7534.48.3';
 	public $sjekk;
 	public $error;
 	public $tittel;
@@ -13,7 +12,7 @@ class nrkripper
 		$this->ch=curl_init();
 		curl_setopt($this->ch, CURLOPT_RETURNTRANSFER, 1);
 		curl_setopt($this->ch, CURLOPT_FOLLOWLOCATION, true);
-		curl_setopt($this->ch,CURLOPT_USERAGENT,$this->useragent);
+		curl_setopt($this->ch,CURLOPT_USERAGENT,'Mozilla/5.0 (iPhone; CPU iPhone OS 5_1 like Mac OS X) AppleWebKit/534.46 (KHTML, like Gecko) Version/5.1 Mobile/9B176 Safari/7534.48.3'); //useragent må være en iOS enhet for at NRK skal tilby formatet som kan rippes
 		curl_setopt($this->ch, CURLOPT_COOKIEFILE,'cookies.txt');
 		curl_setopt($this->ch, CURLOPT_COOKIEJAR,'cookies.txt');
 		require 'config.php';
@@ -23,7 +22,7 @@ class nrkripper
 		include 'filsjekk.php';
 		$this->sjekk=new filsjekk;
 	}
-	public function nrkrip($url,$utmappe) //Dette er funksjonen som kalles for å rippe
+	public function nrkrip($url,$utmappe) //Dette er funksjonen som kalles for å rippe fra NRK
 	{
 		if(substr($utmappe,-1,1)!='/')
 			$utmappe.='/';
@@ -63,7 +62,7 @@ class nrkripper
 		$segmentlist=$this->get($result[1].'index_4_av.m3u8?null='); //Hent liste over segmenter
 			
 		if(!preg_match_all('^.+segment.+^',$segmentlist,$segments)) //Finn alle segmentene
-			die("Ugylig segmentliste\n");
+			die("Ugylig segmentliste for {$this->tittel}\n");
 		return $segments[0];		
 	}
 	public function finntittel($id) //Hent tittel fra tooltip hos NRK
@@ -178,7 +177,7 @@ class nrkripper
 			}
 			else
 			{
-				$this->error.="Ingen undertekster til $id\n";
+				$this->error.="Ingen undertekster til {$this->tittel}\n";
 				return false;	
 			}
 		}
