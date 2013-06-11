@@ -5,6 +5,13 @@ class filsjekk
 	public $error;
 	private function varighetsjekk($varighet,$fil)
 	{
+		require 'tools/dependcheck.php';
+		$depend=new dependcheck;
+		if($depend->depend('mediainfo')!==true)
+		{
+			echo "Mediainfo ikke funnet, kan ikke sjekke om den nedlastede filen har riktig varighet\n";
+			return true;
+		}
 		if(PHP_OS=='WINNT') //Denne funksjonen virker foreløpig ikke i windows
 			return true; 
 		$varighet=str_replace(array(' minutter',' minutt',' timer',' time',','),array('minutes','minute','hours','hour',' '),$varighet); //Gjør om tidsangivelsen fra NRK så den kan brukes med strtotime

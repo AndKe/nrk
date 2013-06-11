@@ -7,6 +7,7 @@ class nrkripper
 	public $sjekk;
 	public $error;
 	public $tittel;
+	public $dependcheck;
 	public function __construct()
 	{
 		$this->ch=curl_init();
@@ -21,6 +22,8 @@ class nrkripper
 		$this->config=$config;
 		include 'filsjekk.php';
 		$this->sjekk=new filsjekk;
+		require 'tools/dependcheck.php';
+		$this->dependcheck=new dependcheck;
 	}
 	public function nrkrip($url,$utmappe) //Dette er funksjonen som kalles for å rippe fra NRK
 	{
@@ -188,6 +191,11 @@ class nrkripper
 	
 	public function mkvmerge($filnavn)
 	{
+		if($this->dependcheck->depend('mkvmerge')!==true)
+		{
+			echo "mkvmerge ble ikke funnet, kan ikke lage mkv\n";
+			return false;
+		}
 		echo "Lager mkv\n";
 		$pathinfo=pathinfo($filnavn);
 		$mkvfil=$pathinfo['dirname'].'/'.$pathinfo['filename'].'.mkv';
