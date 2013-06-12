@@ -1,4 +1,6 @@
 <?Php
+require 'tools/dependcheck.php';
+require 'filsjekk.php';
 class nrkripper
 {
 	private $ch;
@@ -20,9 +22,7 @@ class nrkripper
 		if(substr($config['outpath'],-1,1)!='/') //Outpath må slutte med /
 			$config['outpath'].='/';
 		$this->config=$config;
-		include 'filsjekk.php';
-		$this->sjekk=new filsjekk;
-		require 'tools/dependcheck.php';
+		$this->sjekk=new filsjekk;	
 		$this->dependcheck=new dependcheck;
 	}
 	public function nrkrip($url,$utmappe) //Dette er funksjonen som kalles for å rippe fra NRK

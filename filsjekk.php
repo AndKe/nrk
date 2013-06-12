@@ -5,7 +5,6 @@ class filsjekk
 	public $error;
 	private function varighetsjekk($varighet,$fil)
 	{
-		require 'tools/dependcheck.php';
 		$depend=new dependcheck;
 		if($depend->depend('mediainfo')!==true)
 		{
