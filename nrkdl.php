@@ -5,7 +5,10 @@ include 'functions.php';
 $nrk=new nrkripper;
 foreach ($argv as $url) //Hvert argument er et program som skal lastes ned
 {
-	if(!$nrk->nrkrip($url,$nrk->config['outpath']))
-		echo "Kunne ikke laste ned fra $url\n";
+	$status=$nrk->nrkrip($url,$nrk->config['outpath']);
+	if($status!==false)
+		var_dump($status);
+	else
+		echo $nrk->error;
 }
 ?>

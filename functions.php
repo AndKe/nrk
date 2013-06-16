@@ -38,7 +38,10 @@ class nrkripper
 		
 		$utfil=$utmappe.$filnavn; //Sett sammen utmappe og filnavn til utfil
 		if($this->sjekk->sjekkfil($utfil.'.ts',$this->varighet($data))) //Sjekk om filen allerede er lastet ned
+		{
 			$this->error.="{$this->tittel} er allerede lastet ned\n";
+			return false;
+		}
 		else
 			$this->downloadts($segmentlist,$utfil); //Last ned ts
 		if(!$this->sjekk->sjekkfil($utfil.'.mkv',$this->varighet($data))) //Sjekk om filen allerede er muxet
