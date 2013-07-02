@@ -118,7 +118,7 @@ class nrkripper
 	public function filnavn($tittel)
 	{
 		$filnavn=html_entity_decode($tittel);
-		$filnavn=str_replace(':','-',$filnavn);
+		$filnavn=str_replace(array(':','?'),array('-',''),$filnavn); //Fjern tegn som ikke kan brukes i filnavn på windows
 		return $filnavn;
 	}
 	private function getid($url)
