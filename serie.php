@@ -9,15 +9,15 @@ if(file_exists('sesonger unntak.txt'))
 foreach($serier as $url)
 {
 	$url=trim($url); //sesonger.txt deles etter \n, hvis det er brukt \r\n fjernes \r her
-	$sesonger=$nrk->episodelist($url); //Hent sesongene og episodene i serien
+	$serieinfo=$nrk->serieinfo($url); //Hent sesongene og episodene i serien
+	print_r($serieinfo);
 	
-	foreach($sesonger as $sesongkey=>$sesong) //Gå gjennom sesongene
+	foreach($serieinfo['sesonger'] as $sesongkey=>$sesong) //Gå gjennom sesongene
 	{
-		preg_match('^(.+) .+^',$sesonger[0]['titler'][0],$serietittel);
-		$serietittel=html_entity_decode($serietittel[1]);
-		echo $serietittel.' '.$sesong['sesongtittel']."\n";
-		$outpath=$nrk->config['outpath'].$nrk->filnavn($serietittel.' '.$sesong['sesongtittel']).'/'; //Lag mappenavn for sesongen
-		if(isset($unntak) && array_search($serietittel.' '.$sesong['sesongtittel'],$unntak)!==false) //Sjekk om denne sesongen ikke skal rippes
+		$sesongnavn=$serieinfo['serietittel'].' '.$sesong['sesongtittel'];
+		echo $sesongnavn."\n";
+		$outpath=$nrk->config['outpath'].$nrk->filnavn($sesongnavn).'/'; //Lag mappenavn for sesongen
+		if(isset($unntak) && array_search($sesongnavn,$unntak)!==false) //Sjekk om denne sesongen ikke skal rippes
 			continue;
 		if(!file_exists($outpath)) //Lag mappe
 			mkdir($outpath,0777,true);	

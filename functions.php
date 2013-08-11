@@ -101,7 +101,7 @@ class nrkripper
 		preg_match('^Varighet.+\<dd\>(.+)\</dd\>^',$episodedata,$varighet); 
 		return $varighet[1];
 	}
-	public function episodelist($url) //Hent episoder av en serie
+	public function serieinfo($url) //Hent informasjon og episoder for en serie
 	{
 		if(substr($url,0,4)=='http')
 			$data=$this->get($url);
@@ -109,6 +109,8 @@ class nrkripper
 			die("Ugyldig url til serie: $url\n");
 			
 		preg_match_all('^(/program/Episodes.*)" title="(.*)"^U',$data,$sesongliste);
+		preg_match('^Serietittel:.+dd\>(.+)\</dd^',$data,$serietittel);
+		$serietittel=html_entity_decode($serietittel[1]);
 		
 		$episoder=array(array(),array(),array(),array());
 		foreach (array_unique($sesongliste[1]) as $seasonkey=>$seasonurl) //Gå gjennom url til sesongene
@@ -129,7 +131,7 @@ class nrkripper
 			$sesonger[$seasonkey]['sesongtittel']=str_replace('Vis programmer fra ','',array_unique($sesongliste[2])[$seasonkey]); //Denne måten å håndtere den returnerte verdien er gyldig kode fra PHP 5.4
 			$sesonger[$seasonkey]['rights']=$rights[1];
 		}
-		return $sesonger;		
+		return array('serietittel'=>$serietittel,'sesonger'=>$sesonger);
 	}
 	//Funksjoner som behandler informasjonen
 	public function filnavn($tittel)
