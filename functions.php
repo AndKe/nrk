@@ -114,8 +114,6 @@ class nrkripper
 			
 			$sesong=$this->get($url='http://tv.nrk.no'.$seasonurl); //Hent liste over episodene i sesongen
 			preg_match_all('^"(http://tv\.nrk\.no.*([a-z]{4}[0-9]{8}).*)"\>(.*)\<^U',$sesong,$sesongdata); //Finn alle episodene i sesongen
-			//print_r($episodertemp);
-		
 			$sesonger[$seasonkey]['url']=$sesongdata[1];
 			$sesonger[$seasonkey]['id']=$sesongdata[2];
 			$sesonger[$seasonkey]['titler']=$sesongdata[3];
