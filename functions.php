@@ -114,10 +114,18 @@ class nrkripper
 			
 			$sesong=$this->get($url='http://tv.nrk.no'.$seasonurl); //Hent liste over episodene i sesongen
 			preg_match_all('^"(http://tv\.nrk\.no.*([a-z]{4}[0-9]{8}).*)"\>(.*)\<^U',$sesong,$sesongdata); //Finn alle episodene i sesongen
+			preg_match_all('^col-rights hidden-phone"\>(.+)\</td^Us',$sesong,$rights);
+			foreach($rights[1] as $key=>$value)
+			{
+				//echo $rights[1][$key]."\n";
+				$rights[1][$key]=preg_replace('^\<time datetime="(.+)T(.+)\+.+^s','$1 $2',$rights[1][$key]);
+				$rights[1][$key]=trim($rights[1][$key]);
+			}
 			$sesonger[$seasonkey]['url']=$sesongdata[1];
 			$sesonger[$seasonkey]['id']=$sesongdata[2];
 			$sesonger[$seasonkey]['titler']=$sesongdata[3];
 			$sesonger[$seasonkey]['sesongtittel']=str_replace('Vis programmer fra ','',array_unique($sesongliste[2])[$seasonkey]); //Denne måten å håndtere den returnerte verdien er gyldig kode fra PHP 5.4
+			$sesonger[$seasonkey]['rights']=$rights[1];
 		}
 		return $sesonger;		
 	}
