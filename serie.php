@@ -28,7 +28,10 @@ foreach($serier as $url)
 			if($status!==false)
 				var_dump($status);
 			else
+			{
 				echo $nrk->error;
+				unset($nrk->error);
+			}
 			//echo $nrk->sjekk->error;
 		}
 		if(count(scandir($outpath))==2) //Hvis mappen er tom, fjern den
