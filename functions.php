@@ -47,6 +47,8 @@ class nrkripper
 		if(!$this->sjekk->sjekkfil($utfil.'.mkv',$this->varighet($data))) //Sjekk om filen allerede er muxet
 			$this->mkvmerge($utfil);
 		$this->subtitle($id,$utfil);
+		if($chapters=$this->chapters($data))
+			file_put_contents($utfil.'.chapters.txt',$chapters);
 	}
 	private function get($url)
 	{
@@ -146,7 +148,7 @@ class nrkripper
 	}
 	public function chapters($data) //Henter kapitler og lager liste som kan brukes med mkvmerge --chapters
 	{
-		if(strpos($data,'http://')!==false)
+		if(substr($data,0,4)=='http')
 			$data=$this->get($data);
 
 		$dom = new domDocument;		
@@ -243,6 +245,8 @@ class nrkripper
 		}
 		echo "Lager mkv\n";
 		$cmd="mkvmerge -o \"$filnavn.mkv\" \"$filnavn.ts\"";
+		if(file_exists($filnavn.'.chapters.txt'))
+			$cmd.=" --chapter-charset UTF-8 --chapters \"$filnavn.chapters.txt\"";
 		echo shell_exec($cmd." 2>&1");
 	}
 }
