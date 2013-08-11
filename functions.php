@@ -88,6 +88,12 @@ class nrkripper
 			return false;
 		}
 	}
+	public function sesongepisode($tip) //Eksempel: list($sesong,$episode)=$nrk->sesongepisode($nrk->tooltip($id));
+	{
+		preg_match('^Sesong ([0-9]+).{0,2}\(([0-9]+):([0-9]+)\)^',$tip,$matches);
+		unset($matches[0]);
+		return $matches;
+	}
 	private function varighet($episodedata) //Hent varighet fra beskrivelsen
 	{
 		preg_match('^Varighet.+\<dd\>(.+)\</dd\>^',$episodedata,$varighet); 
