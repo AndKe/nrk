@@ -144,6 +144,33 @@ class nrkripper
 		else
 			return $result[1];
 	}
+	public function chapters($data) //Henter kapitler og lager liste som kan brukes med mkvmerge --chapters
+	{
+		if(strpos($data,'http://')!==false)
+			$data=$this->get($data);
+
+		$dom = new domDocument;		
+		@$dom->loadHTML($data);
+		$pointlist=$dom->getElementById('indexPoints');
+		if(!is_object($pointlist)) //Sjekk om det er kapitler
+			return false;
+		$points=$pointlist->childNodes->item(1)->childNodes->item(1)->childNodes;
+		$num=1;
+		$chapters='';
+		foreach ($points as $i=>$point)
+		{
+			if(!is_object($point->childNodes) || $point->childNodes->item(0)->attributes->length!=3) //Hopp over uønskede elementer
+				continue;
+			$num=str_pad($num,2,'0',STR_PAD_LEFT);
+			$string=$point->childNodes->item(0)->attributes->item(2)->value;
+			preg_match('/([0-9:]+) (.+) \(/',$string,$time);
+		
+			$chapters.="CHAPTER$num={$time[1]}.000\r\n";
+			$chapters.="CHAPTER{$num}NAME={$time[2]}\r\n";
+			$num++;
+		}
+		return trim($chapters);	
+	}
 	//Funksjoner som henter data fra NRK
 	private function downloadts($segments,$utfil)
 	{
