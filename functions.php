@@ -45,7 +45,7 @@ class nrkripper
 		else
 			$this->downloadts($segmentlist,$utfil); //Last ned ts
 		if(!$this->sjekk->sjekkfil($utfil.'.mkv',$this->varighet($data))) //Sjekk om filen allerede er muxet
-			$this->mkvmerge($utfil.'.ts');
+			$this->mkvmerge($utfil);
 		$this->subtitle($id,$utfil);
 	}
 	private function get($url)
@@ -242,9 +242,8 @@ class nrkripper
 			return false;
 		}
 		echo "Lager mkv\n";
-		$pathinfo=pathinfo($filnavn);
-		$mkvfil=$pathinfo['dirname'].'/'.$pathinfo['filename'].'.mkv';
-		echo shell_exec("mkvmerge -o \"$mkvfil\" \"$filnavn\" 2>&1");
+		$cmd="mkvmerge -o \"$filnavn.mkv\" \"$filnavn.ts\"";
+		echo shell_exec($cmd." 2>&1");
 	}
 }
 ?>
