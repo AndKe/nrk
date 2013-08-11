@@ -71,10 +71,13 @@ class nrkripper
 			die("Ugylig segmentliste for {$this->tittel}\n");
 		return $segments[0];		
 	}
+	public function tooltip($id)
+	{
+		return $this->get($url='http://tv.nrk.no/programtooltip/'.$id);
+	}
 	public function finntittel($id) //Hent tittel fra tooltip hos NRK
 	{
-		$tip=$this->get($url='http://tv.nrk.no/programtooltip/'.$id);
-		if(preg_match('^\<h1\>.*\</h1\>^',$tip,$tipresult))
+		if(preg_match('^\<h1\>.*\</h1\>^',$this->tooltip($id),$tipresult))
 		{
 			$name=strip_tags($tipresult[0]);
 			return html_entity_decode($name);
