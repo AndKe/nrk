@@ -40,7 +40,7 @@ class nrkripper
 		if($this->sjekk->sjekkfil($utfil.'.ts',$this->varighet($data))) //Sjekk om filen allerede er lastet ned
 		{
 			$this->error.="{$this->tittel} er allerede lastet ned\n";
-			return false;
+			$return=false;
 		}
 		else
 			$this->downloadts($segmentlist,$utfil); //Last ned ts
@@ -49,6 +49,8 @@ class nrkripper
 		$this->subtitle($id,$utfil);
 		if($chapters=$this->chapters($data))
 			file_put_contents($utfil.'.chapters.txt',$chapters);
+		if(isset($return))
+			return $return;
 	}
 	private function get($url)
 	{
@@ -70,7 +72,10 @@ class nrkripper
 		$segmentlist=$this->get($result[1].'index_4_av.m3u8?null='); //Hent liste over segmenter
 			
 		if(!preg_match_all('^.+segment.+^',$segmentlist,$segments)) //Finn alle segmentene
-			die("Ugylig segmentliste for {$this->tittel}\n");
+		{
+			$this->error.="Ugylig segmentliste for {$this->tittel}\n";
+			return false;
+		}
 		return $segments[0];		
 	}
 	public function tooltip($id)
