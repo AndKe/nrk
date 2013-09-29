@@ -2,7 +2,13 @@
 chdir(dirname(realpath(__FILE__))); //Bytt til mappen scriptet ligger i så relative filbaner blir riktige
 include 'functions.php';
 $nrk=new nrkripper;
-$serier=explode("\n",trim(file_get_contents('serier.txt'))); //Hent liste over serier
+if(!isset($argv[1]))
+	$serier=explode("\n",trim(file_get_contents('serier.txt'))); //Hent liste over serier fra fil
+else
+{
+	unset($argv[0]);
+	$serier=$argv; //Hent liste over serier fra kommandolinjen
+}
 if(file_exists('sesonger unntak.txt'))
 	$unntak=explode("\n",str_replace("\r","",file_get_contents('sesonger unntak.txt'))); //Finn sesonger som ikke skal hentes
 
