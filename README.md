@@ -11,6 +11,9 @@ I tillegg må følgende programmer være tilgjengelig i path:
 * mkvmerge (http://www.bunkus.org/videotools/mkvtoolnix/) (Påkrevd)
 * mediainfo (http://mediainfo.sourceforge.net)
 
+På debian og lignende distribusjoner kan alt installeres med
+``` apt-get install php5 php5-curl mediainfo mkvtoolnix```
+
 ##Bruk
 ###Enkel episode/program
 
