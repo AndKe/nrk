@@ -36,7 +36,7 @@ foreach($serier as $url)
 			else
 			{
 				echo $nrk->error;
-				unset($nrk->error);
+				$nrk->error='';
 			}
 			//echo $nrk->sjekk->error;
 		}
