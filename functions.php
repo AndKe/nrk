@@ -120,15 +120,15 @@ class nrkripper
 		$episoder=array(array(),array(),array(),array());
 		foreach (array_unique($sesongliste[1]) as $seasonkey=>$seasonurl) //Gå gjennom url til sesongene
 		{
-			
 			$sesong=$this->get($url='http://tv.nrk.no'.$seasonurl); //Hent liste over episodene i sesongen
 			preg_match_all('^"(/.*([a-z]{4}[0-9]{8}).*)" class="p-link"\>(.*)\<^U',$sesong,$sesongdata); //Finn alle episodene i sesongen
 			preg_match_all('^col-rights hidden-phone"\>(.+)\</td^Us',$sesong,$rights);
-			foreach($rights[1] as $key=>$value)
+			for($key=0; $key<count($sesongdata[0]); $key++)
 			{
 				//echo $rights[1][$key]."\n";
 				$rights[1][$key]=preg_replace('^\<time datetime="(.+)T(.+)\+.+^s','$1 $2',$rights[1][$key]);
 				$rights[1][$key]=trim($rights[1][$key]);
+				$sesongdata[1][$key]='http://tv.nrk.no'.$sesongdata[1][$key];
 			}
 			$sesonger[$seasonkey]['url']=$sesongdata[1];
 			$sesonger[$seasonkey]['id']=$sesongdata[2];
