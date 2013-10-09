@@ -122,7 +122,7 @@ class nrkripper
 		{
 			
 			$sesong=$this->get($url='http://tv.nrk.no'.$seasonurl); //Hent liste over episodene i sesongen
-			preg_match_all('^"(http://tv\.nrk\.no.*([a-z]{4}[0-9]{8}).*)"\>(.*)\<^U',$sesong,$sesongdata); //Finn alle episodene i sesongen
+			preg_match_all('^"(/.*([a-z]{4}[0-9]{8}).*)" class="p-link"\>(.*)\<^U',$sesong,$sesongdata); //Finn alle episodene i sesongen
 			preg_match_all('^col-rights hidden-phone"\>(.+)\</td^Us',$sesong,$rights);
 			foreach($rights[1] as $key=>$value)
 			{
