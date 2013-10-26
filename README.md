@@ -27,6 +27,11 @@ Link til en eller flere programmer oppgis som argumenter:
 Hele serier kan lastes ned med serie.php. 
 ```php serie.php http://tv.nrk.no/serie/store-maskiner```
 
+###Video fra nyhetsartikkel
+For å laste ned videoer fra en nyhetsartikkel brukes newsrip.php
+Den henter ned alle videoer i artikkelen. Link til den aktuelle artikkelen oppgis på kommandolinjen:
+php newsrip.php http://www.nrk.no/kultur/se-lilyhammer-uten-spesialeffekter-1.11315012
+
 ##Plattformstøtte
 Verktøyet er testet på og tilpasset windows og linux.
 
