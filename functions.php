@@ -10,6 +10,7 @@ class nrkripper
 	public $error;
 	public $tittel;
 	public $dependcheck;
+	public $mode;
 	public function __construct()
 	{
 		$this->ch=curl_init();
@@ -52,7 +53,7 @@ class nrkripper
 		if(isset($return))
 			return $return;
 	}
-	private function get($url)
+	public function get($url)
 	{
 		curl_setopt($this->ch,CURLOPT_URL,$url);
 		$result=curl_exec($this->ch);
@@ -61,7 +62,7 @@ class nrkripper
 		return $result;
 	}
 	//Funksjoner som heter info fra NRK
-	private function segmentlist($data)
+	public function segmentlist($data)
 	{
 		preg_match('^="(.*)master.m3u8.*"^U',$data,$result); //Finn basisurl
 		if(!isset($result[1])) //Sjekk om det ble funnet en url
@@ -69,8 +70,27 @@ class nrkripper
 			$this->error.="Finner ikke segmentliste for {$this->tittel}\n";
 			return false;
 		}
-		$segmentlist=$this->get($result[1].'index_4_av.m3u8?null='); //Hent liste over segmenter
-			
+		$doc = new DOMDocument();
+		@$doc->loadHTML($data);
+		$player=$doc->getElementById('playerelement');
+		$class=$player->getAttribute('class');
+		$media=$player->getAttribute('data-media');
+
+		if(strpos($class,'radio'))
+		{
+			$this->mode='radio';
+			$segmentlist=$this->get($result[1].'index_1_a.m3u8?null=');
+		}
+		elseif(strpos($class,'tv'))
+		{
+			$this->mode='tv';
+			$segmentlist=$this->get($result[1].'index_4_av.m3u8?null='); //Hent liste over segmenter
+		}
+		else
+		{
+			$this->error.="Finner ingten avspiller for tv eller radio\n";
+			return false;
+		}
 		if(!preg_match_all('^.+segment.+^',$segmentlist,$segments)) //Finn alle segmentene
 		{
 			$this->error.="Ugylig segmentliste for {$this->tittel}\n";
@@ -147,7 +167,7 @@ class nrkripper
 			$filnavn=utf8_decode($filnavn);
 		return $filnavn;
 	}
-	private function getid($url)
+	public function getid($url)
 	{
 		preg_match('^/([a-z]+[0-9]+/*)^',$url,$result);
 		if(!isset($result[1]))
@@ -183,7 +203,7 @@ class nrkripper
 		return trim($chapters);	
 	}
 	//Funksjoner som henter data fra NRK
-	private function downloadts($segments,$utfil)
+	public function downloadts($segments,$utfil)
 	{
 		$count=count($segments);
 		if(file_exists($utfil.'.tmp'))
@@ -217,8 +237,11 @@ class nrkripper
 		}
 		echo "\n";
 		fclose($file); //Lukk utfilen
-		rename($utfil.'.tmp',$utfil.'.ts');	//Lag riktig filtype
-		return $utfil.'.ts';
+		if($this->mode=='radio')
+			rename($utfil.'.tmp',$filnavn=$utfil.'.m4a'); //Lag riktig filtype for radio
+		else
+			rename($utfil.'.tmp',$filnavn=$utfil.'.ts');	//Lag riktig filtype tv
+		return $filnavn;
 	}
 	public function subtitle($id,$filnavn) //$filnavn skal være fullstendig bane uten extension
 	{
