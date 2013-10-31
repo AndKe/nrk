@@ -34,7 +34,7 @@ class nrkripper
 		$id=$this->getid($url); //Finn id
 		$this->tittel=$this->finntittel($data); //Hent tittel
 		if($this->tittel===false)
-			die($this->error);
+			return false;
 		if(!$segmentlist=$this->segmentlist($data)) //Hent segmentliste
 			return false; //Hvis det ikke er mulig å laste ned programmet, returner false
 		$filnavn=$this->filnavn($this->tittel); //Formater tittel for filnavn
