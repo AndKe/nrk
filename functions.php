@@ -32,7 +32,9 @@ class nrkripper
 			$utmappe.='/';
 		$data=$this->get($url); //Hent informasjon fra NRK
 		$id=$this->getid($url); //Finn id
-		$this->tittel=$this->finntittel($id); //Hent tittel
+		$this->tittel=$this->finntittel($data); //Hent tittel
+		if($this->tittel===false)
+			die($this->error);
 		if(!$segmentlist=$this->segmentlist($data)) //Hent segmentliste
 			return false; //Hvis det ikke er mulig å laste ned programmet, returner false
 		$filnavn=$this->filnavn($this->tittel); //Formater tittel for filnavn
@@ -102,11 +104,11 @@ class nrkripper
 	{
 		return $this->get($url='http://tv.nrk.no/programtooltip/'.$id);
 	}
-	public function finntittel($id) //Hent tittel fra tooltip hos NRK
+	public function finntittel($data) //Hent tittel fra tooltip hos NRK
 	{
-		if(preg_match('^\<h1\>.*\</h1\>^',$this->tooltip($id),$tipresult))
+		if(preg_match('^<meta name="title" content="(.+)"^',$data,$tittel))
 		{
-			$name=strip_tags($tipresult[0]);
+			$name=strip_tags($tittel[1]);
 			return html_entity_decode($name);
 		}
 		else
