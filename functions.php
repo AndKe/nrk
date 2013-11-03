@@ -239,10 +239,7 @@ class nrkripper
 		}
 		echo "\n";
 		fclose($file); //Lukk utfilen
-		if($this->mode=='radio')
-			rename($utfil.'.tmp',$filnavn=$utfil.'.m4a'); //Lag riktig filtype for radio
-		else
-			rename($utfil.'.tmp',$filnavn=$utfil.'.ts');	//Lag riktig filtype tv
+		rename($utfil.'.tmp',$filnavn=$utfil.'.ts'); //Lag riktig filtype
 		return $filnavn;
 	}
 	public function subtitle($id,$filnavn) //$filnavn skal være fullstendig bane uten extension
