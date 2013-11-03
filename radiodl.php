@@ -2,8 +2,8 @@
 unset($argv[0]);
 chdir(dirname(realpath(__FILE__))); //Bytt til mappen scriptet ligger i så relative filbaner blir riktige
 require 'functions.php';
-$nrk->dependcheck->depend(array('avconv'));
 $nrk=new nrkripper;
+$nrk->dependcheck->depend(array('avconv'));
 $data=$nrk->get($argv[1]);
 $segments=$nrk->segmentlist($data);
 
@@ -12,6 +12,6 @@ $segments=$nrk->segmentlist($data);
 $title=$nrk->finntittel($data);
 $utfil=$nrk->config['outpath'].$nrk->filnavn($title);
 $nrk->downloadts($segments,$utfil);
-shell_exec("avconv -i $utfil.ts -bsf:a aac_adtstoasc -acodec copy $utfil.m4a");
+shell_exec("avconv -i \"$utfil.ts\" -bsf:a aac_adtstoasc -acodec copy \"$utfil.m4a\"");
 
 echo $nrk->error;
