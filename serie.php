@@ -15,22 +15,31 @@ if(file_exists('sesonger unntak.txt'))
 foreach($serier as $url)
 {
 	$url=trim($url); //sesonger.txt deles etter \n, hvis det er brukt \r\n fjernes \r her
+
 	$serieinfo=$nrk->serieinfo($url); //Hent sesongene og episodene i serien
-	print_r($serieinfo);
-	
-	foreach($serieinfo['sesonger'] as $sesongkey=>$sesong) //Gå gjennom sesongene
+
+	foreach($serieinfo['sesonger'] as $sesong) //Gå gjennom sesongene
 	{
-		$sesongnavn=$serieinfo['serietittel'].' '.$sesong['sesongtittel'];
+		if(!empty($sesong['tittel'])) //Sjekk om sesongen har et navn
+			$sesongnavn=$serieinfo['serietittel'].' '.$sesong['tittel'];
+		else
+			$sesongnavn=$serieinfo['serietittel'];
 		echo $sesongnavn."\n";
+
 		$outpath=$nrk->config['outpath'].$nrk->filnavn($sesongnavn).'/'; //Lag mappenavn for sesongen
 		if(isset($unntak) && array_search($sesongnavn,$unntak)!==false) //Sjekk om denne sesongen ikke skal rippes
 			continue;
 		if(!file_exists($outpath)) //Lag mappe
 			mkdir($outpath,0777,true);	
-		foreach ($sesong['url'] as $episodekey=>$url) //Gå gjennom episodene i sesongen
+		foreach ($sesong['episoder'] as $episodekey=>$episode) //Gå gjennom episodene i sesongen
 		{
+			if($eptext=$nrk->sesongepisode($episode['description']))
+				$nrk->tittel=$serieinfo['serietittel'].' '.$eptext;
+			else
+				$nrk->tittel=$episode['title'];
 			
-			$status=$nrk->nrkrip($url,$outpath);
+			$status=$nrk->nrkrip($serieinfo['baseurl'].'/'.$episode['id'],$outpath);
+
 			if($status!==false)
 				var_dump($status);
 			else

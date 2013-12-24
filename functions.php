@@ -32,7 +32,8 @@ class nrkripper
 			$utmappe.='/';
 		$data=$this->get($url); //Hent informasjon fra NRK
 		$id=$this->getid($url); //Finn id
-		$this->tittel=$this->finntittel($data); //Hent tittel
+		if(!isset($this->tittel))
+			$this->tittel=$this->finntittel($data); //Hent tittel hvis den ikke er satt et annet sted
 		if($this->tittel===false)
 			return false;
 		if(!$segmentlist=$this->segmentlist($data)) //Hent segmentliste
@@ -121,7 +122,7 @@ class nrkripper
 			return false;
 		}
 	}
-	public function sesongepisode($description,$returnstring=true) //Finn sesong og episode fra beskrivelse på NRK
+	public function sesongepisode($description,$returnstring=true)
 	{
 		if(preg_match('^Sesong ([0-9]+).{0,2}\(([0-9]+):([0-9]+)\)^i',$description,$sesongepisode)) //Episode og sesong
 		{
@@ -155,38 +156,56 @@ class nrkripper
 		preg_match('^Varighet.+\<dd\>(.+)\</dd\>^',$episodedata,$varighet); 
 		return $varighet[1];
 	}
-	public function serieinfo($url) //Hent informasjon og episoder for en serie
+
+	public function serieinfo($url)
 	{
-		if(substr($url,0,4)=='http')
-			$data=$this->get($url);
-		else
-			die("Ugyldig url til serie: $url\n");
-			
-		preg_match_all('^(/program/Episodes.*)" title="(.*)"^U',$data,$sesongliste);
-		preg_match('^Serietittel:.+dd\>(.+)\</dd^',$data,$serietittel);
-		$serietittel=html_entity_decode($serietittel[1]);
-		
-		$episoder=array(array(),array(),array(),array());
-		foreach (array_unique($sesongliste[1]) as $seasonkey=>$seasonurl) //Gå gjennom url til sesongene
-		{
-			$sesong=$this->get($url='http://tv.nrk.no'.$seasonurl); //Hent liste over episodene i sesongen
-			preg_match_all('^"(/.*([a-z]{4}[0-9]{8}).*)" class="p-link"\>(.*)\<^U',$sesong,$sesongdata); //Finn alle episodene i sesongen
-			preg_match_all('^col-rights hidden-phone"\>(.+)\</td^Us',$sesong,$rights);
-			for($key=0; $key<count($sesongdata[0]); $key++)
-			{
-				//echo $rights[1][$key]."\n";
-				$rights[1][$key]=preg_replace('^\<time datetime="(.+)T(.+)\+.+^s','$1 $2',$rights[1][$key]);
-				$rights[1][$key]=trim($rights[1][$key]);
-				$sesongdata[1][$key]='http://tv.nrk.no'.$sesongdata[1][$key];
-			}
-			$sesonger[$seasonkey]['url']=$sesongdata[1];
-			$sesonger[$seasonkey]['id']=$sesongdata[2];
-			$sesonger[$seasonkey]['titler']=$sesongdata[3];
-			$sesonger[$seasonkey]['sesongtittel']=str_replace('Vis programmer fra ','',array_unique($sesongliste[2])[$seasonkey]); //Denne måten å håndtere den returnerte verdien er gyldig kode fra PHP 5.4
-			$sesonger[$seasonkey]['rights']=$rights[1];
-		}
-		return array('serietittel'=>$serietittel,'sesonger'=>$sesonger);
+		$seriedata=$this->get($baseurl=$this->baseurl($url));
+		preg_match('^Serietittel:.+dd\>(.+)\</dd^',$seriedata,$serietittel);
+		return array('serietittel'=>html_entity_decode($serietittel[1]),'sesonger'=>$this->sesonger($seriedata),'baseurl'=>$baseurl);
 	}
+	private function sesonger($seriedata)
+	{
+		preg_match_all('^href="(/program/Episodes/.+)".+data-identifier="([0-9]+)".+\>(.+)\<^sU',$seriedata,$sesongliste);
+	
+		$sesongliste[1]=str_replace('/program','http://tv.nrk.no/program',$sesongliste[1]);
+		unset($sesongliste[0]);
+		foreach($sesongliste[2] as $key=>$id)
+		{
+			if($sesongliste[3][$key]=='Alle episoder')
+				$sesongliste[3][$key]='';
+			$sesonger[$id]=array('tittel'=>trim($sesongliste[3][$key]),'url'=>$sesongliste[1][$key],'episoder'=>$this->episoder($this->get($sesongliste[1][$key])));	
+		}
+		return $sesonger;
+	}
+
+	private function episoder($sesongdata)
+	{
+		$dom = new DOMDocument;
+
+		@$dom->loadHTML($sesongdata);
+		$lists=$dom->getElementsByTagName('ul');
+	
+		$episodes=$lists->item(0)->childNodes; //ul
+
+		foreach ($episodes as $key=>$episode) //li
+		{
+			if(get_class($episode)=="DOMText")
+				continue;
+	
+			$episodefields=$episode->childNodes;
+			$episodeinfo['description']=$episodefields->item(3)->textContent; //Beskrivelse
+			$episodeinfo['title']=$episodefields->item(1)->textContent; //Tittel
+			$episodeinfo['rights']=$episodefields->item(7)->textContent; //Rettigheter
+			$episodeinfo['parsedrights']=$this->rightsparser($episodeinfo['rights']); //Tolk rettigheter
+			$episodeinfo['ontv']=$episodefields->item(5)->textContent; //Sist sendt/sendes neste gang
+			$episodeinfo['id']=$episode->attributes->item(1)->value; //ID for episoden
+
+			$sesongepisoder[]=$episodeinfo;
+		}
+		return $sesongepisoder;
+	}
+
+	
 	//Funksjoner som behandler informasjonen
 	public function filnavn($tittel)
 	{
@@ -230,6 +249,16 @@ class nrkripper
 			$num++;
 		}
 		return trim($chapters);	
+	}
+	private function baseurl($url)
+	{
+		return preg_replace('^(serie/.+?)/.+^','$1',$url); //Hent bare første delen etter /serie/
+	}
+	public function rightsparser($string)
+	{
+		if($string=='Ikke på nett')
+			return false;
+		//Her skal x antall dager frem i tid tolkes til unix timestasmp
 	}
 	//Funksjoner som henter data fra NRK
 	public function downloadts($segments,$utfil)
@@ -275,7 +304,7 @@ class nrkripper
 		$subconvert=new subconvert;
 		if(!file_exists($filnavn.".srt"))
 		{
-			$xml=file_get_contents('http://tv.nrk.no/programsubtitles/'.$id);
+			$xml=$this->get('http://tv.nrk.no/programsubtitles/'.$id);
 			if(trim($xml)!='') //Sjekk at xml filen ikke er blank
 			{
 				file_put_contents($filnavn.".xml",$xml); //Lagre underteksten i originalt xml format
