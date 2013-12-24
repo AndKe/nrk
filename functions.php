@@ -104,11 +104,15 @@ class nrkripper
 	{
 		return $this->get($url='http://tv.nrk.no/programtooltip/'.$id);
 	}
-	public function finntittel($data) //Hent tittel fra tooltip hos NRK
+	public function finntittel($data) //Hent tittel fra NRK
 	{
 		if(preg_match('^<meta name="title" content="(.+)"^',$data,$tittel))
 		{
 			$name=strip_tags($tittel[1]);
+			if($episodetext=$this->sesongepisode($data))
+				$name.=' '.$episodetext;
+			elseif(preg_match('^\<meta name="episodenumber" content="(.+)"^',$data,$episode))
+				$name.=' '.$episode[1];
 			return html_entity_decode($name);
 		}
 		else
@@ -117,11 +121,34 @@ class nrkripper
 			return false;
 		}
 	}
-	public function sesongepisode($tip) //Eksempel: list($sesong,$episode)=$nrk->sesongepisode($nrk->tooltip($id));
+	public function sesongepisode($description,$returnstring=true) //Finn sesong og episode fra beskrivelse på NRK
 	{
-		preg_match('^Sesong ([0-9]+).{0,2}\(([0-9]+):([0-9]+)\)^',$tip,$matches);
-		unset($matches[0]);
-		return $matches;
+		if(preg_match('^Sesong ([0-9]+).{0,2}\(([0-9]+):([0-9]+)\)^i',$description,$sesongepisode)) //Episode og sesong
+		{
+			if($returnstring)
+			{
+				$sesongepisode[1]=str_pad($sesongepisode[1],2,'0',STR_PAD_LEFT);
+				$sesongepisode[2]=str_pad($sesongepisode[2],2,'0',STR_PAD_LEFT);		
+				return "S$sesongepisode[1]E$sesongepisode[2]";
+			}
+			else
+				return $sesongepisode;
+		}
+		elseif(preg_match('^\(([0-9]+):([0-9]+)\)^',$description,$episode)) //Episide uten sesong
+		{
+			if($returnstring)
+			{
+				$episode[1]=str_pad($episode[1],2,'0',STR_PAD_LEFT);
+				return "EP$episode[1]";
+			}
+			else
+				return $episode;
+		}
+		else
+		{
+			//var_dump($description);
+			return false; //Ikke funnet
+		}
 	}
 	private function varighet($episodedata) //Hent varighet fra beskrivelsen
 	{
