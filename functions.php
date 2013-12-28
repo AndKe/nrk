@@ -11,8 +11,14 @@ class nrkripper
 	public $tittel;
 	public $dependcheck;
 	public $mode;
+	public $br;
 	public function __construct()
 	{
+		if(php_sapi_name() == 'cli') //Sjekk om scriptet kjøres på kommandolinje eller i browser for å avgjøre linjeskift
+			$this->br="\n";
+		else
+			$this->br="<br />\n";
+
 		$this->ch=curl_init();
 		curl_setopt($this->ch, CURLOPT_RETURNTRANSFER, 1);
 		curl_setopt($this->ch, CURLOPT_FOLLOWLOCATION, true);
@@ -43,7 +49,7 @@ class nrkripper
 		$utfil=$utmappe.$filnavn; //Sett sammen utmappe og filnavn til utfil
 		if($this->sjekk->sjekkfil($utfil.'.ts',$this->varighet($data))) //Sjekk om filen allerede er lastet ned
 		{
-			$this->error.="{$this->tittel} er allerede lastet ned\n";
+			$this->error.="{$this->tittel} er allerede lastet ned".$this->br;
 			$return=false;
 		}
 		else
@@ -61,7 +67,7 @@ class nrkripper
 		curl_setopt($this->ch,CURLOPT_URL,$url);
 		$result=curl_exec($this->ch);
 		if($result===false) //Hvis curl returnerer false er noe galt
-			die("Kunne ikke hente data fra NRK, sjekk internettforbindelsen\n");
+			die("Kunne ikke hente data fra NRK, sjekk internettforbindelsen".$this->br);
 		return $result;
 	}
 	//Funksjoner som heter info fra NRK
@@ -70,7 +76,7 @@ class nrkripper
 		preg_match('^="(.*)master.m3u8.*"^U',$data,$result); //Finn basisurl
 		if(!isset($result[1])) //Sjekk om det ble funnet en url
 		{
-			$this->error.="Finner ikke segmentliste for {$this->tittel}\n";
+			$this->error.="Finner ikke segmentliste for ".$this->tittel.$this->br;
 			return false;
 		}
 		$doc = new DOMDocument();
@@ -91,12 +97,12 @@ class nrkripper
 		}
 		else
 		{
-			$this->error.="Finner ingten avspiller for tv eller radio\n";
+			$this->error.="Finner ingen avspiller for tv eller radio".$this->br;
 			return false;
 		}
 		if(!preg_match_all('^.+segment.+^',$segmentlist,$segments)) //Finn alle segmentene
 		{
-			$this->error.="Ugylig segmentliste for {$this->tittel}\n";
+			$this->error.="Ugylig segmentliste for ".$this->tittel.$this->br;
 			return false;
 		}
 		return $segments[0];		
@@ -219,7 +225,7 @@ class nrkripper
 	{
 		preg_match('^/([a-z]+[0-9]+/*)^',$url,$result);
 		if(!isset($result[1]))
-			die("Finner ikke id i url: $url\n");
+			die("Finner ikke id i url: $url".$this->br);
 		else
 			return $result[1];
 	}
@@ -269,13 +275,16 @@ class nrkripper
 		
 		$file=fopen($utfil.'.tmp','x'); //Åpne utfil for skriving
 		if(!$file)
-			die("Kan ikke åpne $utfil.tmp\n");
+			die("Kan ikke åpne $utfil.tmp".$this->br);
 		foreach($segments as $key=>$segment)
 		{
 			if(!$this->silent)
 			{
 				$num=$key+1;
-				echo "\rLaster ned segment $num av $count til $utfil   ";
+				if($this->br=="\n")
+					echo "\rLaster ned segment $num av $count til $utfil   ";
+				else
+					echo "Laster ned segment $num av $count til $utfil".$this->br;
 			}
 			curl_setopt($this->ch, CURLOPT_URL,$segment);
 			$tries=0;
@@ -290,7 +299,7 @@ class nrkripper
 				echo "\nFeil ved nedlasting av segment $num. Prøver på nytt for $tries. gang";
 			}
 			if($tries==3)
-				die("\nNedlasting feilet etter $tries forsøk\n");
+				die("\nNedlasting feilet etter $tries forsøk".$this->br);
 			fwrite($file,$data);
 		}
 		echo "\n";
@@ -314,7 +323,7 @@ class nrkripper
 			}
 			else
 			{
-				$this->error.="Ingen undertekster til {$this->tittel}\n";
+				$this->error.="Ingen undertekster til ".$this->tittel.$this->br;
 				return false;	
 			}
 		}
@@ -327,14 +336,18 @@ class nrkripper
 	{
 		if($this->dependcheck->depend('mkvmerge')!==true)
 		{
-			echo "mkvmerge ble ikke funnet, kan ikke lage mkv\n";
+			echo "mkvmerge ble ikke funnet, kan ikke lage mkv".$this->br;
 			return false;
 		}
-		echo "Lager mkv\n";
+		echo "Lager mkv".$this->br;
 		$cmd="mkvmerge -o \"$filnavn.mkv\" \"$filnavn.ts\"";
 		if(file_exists($filnavn.'.chapters.txt'))
 			$cmd.=" --chapter-charset UTF-8 --chapters \"$filnavn.chapters.txt\"";
-		echo shell_exec($cmd." 2>&1");
+		$shellreturn=shell_exec($cmd." 2>&1");
+		if($this->br=="\n")
+			echo $shellreturn;
+		else
+			echo nl2br($shellreturn);
 	}
 }
 ?>
