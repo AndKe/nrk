@@ -66,8 +66,14 @@ class nrkripper
 	{
 		curl_setopt($this->ch,CURLOPT_URL,$url);
 		$result=curl_exec($this->ch);
+		$http_status = curl_getinfo($this->ch, CURLINFO_HTTP_CODE);
 		if($result===false) //Hvis curl returnerer false er noe galt
 			die("Kunne ikke hente data fra NRK, sjekk internettforbindelsen".$this->br);
+		elseif($http_status!=200)
+		{
+			$this->error.="Kunne ikke hente data fra nrk, HTTP feilkode $http_status".$this->br;
+			return false;	
+		}
 		return $result;
 	}
 	//Funksjoner som heter info fra NRK
@@ -159,8 +165,13 @@ class nrkripper
 	}
 	private function varighet($episodedata) //Hent varighet fra beskrivelsen
 	{
-		preg_match('^Varighet.+\<dd\>(.+)\</dd\>^',$episodedata,$varighet); 
-		return $varighet[1];
+		if(preg_match('^Varighet.+\<dd\>(.+)\</dd\>^',$episodedata,$varighet))
+			return $varighet[1];
+		else
+		{
+			$this->error.="Finner ikke varighet\n";
+			return false;	
+		}
 	}
 
 	public function serieinfo($url)
@@ -225,7 +236,10 @@ class nrkripper
 	{
 		preg_match('^/([a-z]+[0-9]+/*)^',$url,$result);
 		if(!isset($result[1]))
-			die("Finner ikke id i url: $url".$this->br);
+		{
+			$this->error="Finner ikke id i url: $url".$this->br;
+			return false;
+		}
 		else
 			return $result[1];
 	}

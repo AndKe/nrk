@@ -17,7 +17,7 @@ foreach($serier as $url)
 	$url=trim($url); //sesonger.txt deles etter \n, hvis det er brukt \r\n fjernes \r her
 
 	$serieinfo=$nrk->serieinfo($url); //Hent sesongene og episodene i serien
-
+	echo $serieinfo['serietittel'].$nrk->br;
 	foreach($serieinfo['sesonger'] as $sesong) //Gå gjennom sesongene
 	{
 		if(!empty($sesong['tittel'])) //Sjekk om sesongen har et navn
