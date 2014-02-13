@@ -208,8 +208,7 @@ class nrkripper
 		{
 			if(get_class($episode)=="DOMText")
 				continue;
-	
-			$episodefields=$episode->childNodes;
+			$episodefields=$episode->childNodes->item(1)->childNodes->item(1)->childNodes; //a>div
 			$episodeinfo['description']=$episodefields->item(3)->textContent; //Beskrivelse
 			$episodeinfo['title']=$episodefields->item(1)->textContent; //Tittel
 			$episodeinfo['rights']=$episodefields->item(7)->textContent; //Rettigheter
