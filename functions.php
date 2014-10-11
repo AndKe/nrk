@@ -147,7 +147,8 @@ class nrkripper
 			else
 				return $sesongepisode;
 		}
-		elseif(preg_match('^\(([0-9]+):([0-9]+)\)^',$description,$episode)) //Episide uten sesong
+		//elseif(preg_match('^\(([0-9]+):([0-9]+)\)^',$description,$episode)) //Episide uten sesong
+		elseif(preg_match('^([0-9]+):([0-9]+)^',$description,$episode)) //Episide uten sesong
 		{
 			if($returnstring)
 			{
@@ -177,8 +178,13 @@ class nrkripper
 	public function serieinfo($url)
 	{
 		$seriedata=$this->get($baseurl=$this->baseurl($url));
-		preg_match('^Serietittel:.+dd\>(.+)\</dd^',$seriedata,$serietittel);
-		return array('serietittel'=>html_entity_decode($serietittel[1]),'sesonger'=>$this->sesonger($seriedata),'baseurl'=>$baseurl);
+		if(preg_match('^Serietittel:.+dd\>(.+)\</dd^sU',$seriedata,$serietittel))
+			return array('serietittel'=>html_entity_decode($serietittel[1]),'sesonger'=>$this->sesonger($seriedata),'baseurl'=>$baseurl);
+		else
+		{
+			trigger_error("Invalid series url: $url",E_USER_WARNING);
+			return false;
+		}
 	}
 	private function sesonger($seriedata)
 	{
@@ -233,7 +239,7 @@ class nrkripper
 	}
 	public function getid($url)
 	{
-		preg_match('^/([a-z]+[0-9]+/*)^',$url,$result);
+		preg_match('^/([a-z]+[0-9]+/*)^i',$url,$result);
 		if(!isset($result[1]))
 		{
 			$this->error="Finner ikke id i url: $url".$this->br;
