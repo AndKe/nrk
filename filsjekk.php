@@ -3,35 +3,40 @@ class filsjekk
 {
 	public $varighettoleranse=90;
 	public $error;
-	private function varighetsjekk($varighet,$fil)
+	public $video;
+	function __construct()
 	{
-		$depend=new dependcheck;
-		if($depend->depend('mediainfo')!==true)
-		{
-			echo "Mediainfo ikke funnet, kan ikke sjekke om den nedlastede filen har riktig varighet\n";
-			return true;
-		}
-		if(PHP_OS=='WINNT') //Denne funksjonen virker foreløpig ikke i windows
-			return true; 
-		$varighet=str_replace(array(' minutter',' minutt',' timer',' time',','),array('minutes','minute','hours','hour',' '),$varighet); //Gjør om tidsangivelsen fra NRK så den kan brukes med strtotime
-		$mediainfo=trim(shell_exec($cmd="mediainfo --Inform=\"Video;%Duration%\" '$fil' 2>&1")); //Hent varighet fra mediainfo
-		$mediainfo=$mediainfo/1000;
-		$varighet=strtotime($varighet,0);
+		require_once 'tools/video.php';
+		$this->video=new video;
+	}
+	private function varighetsjekk($varighet_nrk,$fil)
+	{
+		$varighet_nrk=str_replace(array(' minutter',' minutt',' timer',' time',','),array('minutes','minute','hours','hour',' '),$varighet_nrk); //Gjør om tidsangivelsen fra NRK så den kan brukes med strtotime
+		$varighet_nrk=strtotime($varighet_nrk,0);
+		$varighet_fil=$this->video->duration($fil); //Hent varighet på filen
 	
-		if($varighet==$mediainfo)
+		if($varighet_nrk==$varighet_fil) //Varighet er riktig
 			return true;
-		elseif($varighet>$mediainfo && $varighet-$mediainfo<=$this->varighettoleranse)
+		elseif($varighet_nrk>$varighet_fil && $varighet_nrk-$varighet_fil<=$this->varighettoleranse) //Varighet er innenfor toleransen
 			return true;
-		elseif($mediainfo>$varighet && $mediainfo-$varighet<=$this->varighettoleranse)
+		elseif($varighet_fil>$varighet_nrk && $varighet_fil-$varighet_nrk<=$this->varighettoleranse) //Varighet er innenfor toleransen
 			return true;
 		else
+		{
+			$this->error.="Feil varighet: NRK oppgir $varighet_nrk, filen er $varighet_fil\n";
 			return false;
+		}
 	
 	}
-	private function varighet($episodedata)
-	{
-			preg_match('^Varighet.+\<dd\>(.+)\</dd\>^',$episodedata,$varighet); //Hent varighet fra NRK
+	public function varighet($episodedata)
+	{	
+		if(preg_match('^Varighet.+\<dd\>(.+)\</dd\>^sU',$episodedata,$varighet))
 			return $varighet[1];
+		else
+		{
+			$this->error.="Finner ikke varighet\n";
+			return false;	
+		}
 	}
 	public function sjekkfil($fil,$varighet) //Sjekk om filen eksisterer og om eventuell eksisterende fil er fullstendig. Er eksisterende fil gyldig returneres true
 	{

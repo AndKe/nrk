@@ -47,14 +47,14 @@ class nrkripper
 		$filnavn=$this->filnavn($this->tittel); //Formater tittel for filnavn
 		
 		$utfil=$utmappe.$filnavn; //Sett sammen utmappe og filnavn til utfil
-		if($this->sjekk->sjekkfil($utfil.'.ts',$this->varighet($data))) //Sjekk om filen allerede er lastet ned
+		if($this->sjekk->sjekkfil($utfil.'.ts',$this->sjekk->varighet($data))) //Sjekk om filen allerede er lastet ned
 		{
 			$this->error.="{$this->tittel} er allerede lastet ned".$this->br;
 			$return=false;
 		}
 		else
 			$this->downloadts($segmentlist,$utfil); //Last ned ts
-		if(!$this->sjekk->sjekkfil($utfil.'.mkv',$this->varighet($data))) //Sjekk om filen allerede er muxet
+		if(!$this->sjekk->sjekkfil($utfil.'.mkv',$this->sjekk->varighet($data))) //Sjekk om filen allerede er muxet
 			$this->mkvmerge($utfil);
 		$this->subtitle($id,$utfil);
 		if($chapters=$this->chapters($data))
@@ -162,16 +162,6 @@ class nrkripper
 		{
 			//var_dump($description);
 			return false; //Ikke funnet
-		}
-	}
-	private function varighet($episodedata) //Hent varighet fra beskrivelsen
-	{
-		if(preg_match('^Varighet.+\<dd\>(.+)\</dd\>^',$episodedata,$varighet))
-			return $varighet[1];
-		else
-		{
-			$this->error.="Finner ikke varighet\n";
-			return false;	
 		}
 	}
 
