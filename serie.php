@@ -35,11 +35,11 @@ foreach($serier as $url)
 			mkdir($outpath,0777,true);	
 		foreach ($sesong['episoder'] as $episodekey=>$episode) //Gå gjennom episodene i sesongen
 		{
-			if($eptext=$nrk->sesongepisode($episode['description']))
+			if(($eptext=$nrk->sesongepisode($episode['description'])) || ($eptext=$nrk->sesongepisode($episode['title'],true,$sesong['nummer'])))
 				$nrk->tittel=$serieinfo['serietittel'].' '.$eptext;
 			else
 				$nrk->tittel=$episode['title'];
-			
+
 			$status=$nrk->nrkrip($serieinfo['baseurl'].'/'.$episode['id'],$outpath);
 
 			if($status!==false)

@@ -134,7 +134,7 @@ class nrkripper
 			return false;
 		}
 	}
-	public function sesongepisode($description,$returnstring=true)
+	public function sesongepisode($description,$returnstring=true,$sesong=false)
 	{
 		if(preg_match('^Sesong ([0-9]+).{0,2}\(([0-9]+):([0-9]+)\)^i',$description,$sesongepisode)) //Episode og sesong
 		{
@@ -153,7 +153,13 @@ class nrkripper
 			if($returnstring)
 			{
 				$episode[1]=str_pad($episode[1],2,'0',STR_PAD_LEFT);
-				return "EP$episode[1]";
+				if($sesong===false)
+					return "EP$episode[1]";
+				else
+				{
+					$sesong=str_pad($sesong,2,'0',STR_PAD_LEFT);
+					return "S{$sesong}E{$episode[1]}";
+				}
 			}
 			else
 				return $episode;
@@ -187,6 +193,10 @@ class nrkripper
 			if($sesongliste[3][$key]=='Alle episoder')
 				$sesongliste[3][$key]='';
 			$sesonger[$id]=array('tittel'=>trim($sesongliste[3][$key]),'url'=>$sesongliste[1][$key],'episoder'=>$this->episoder($this->get($sesongliste[1][$key])));	
+			if(preg_match('/Sesong ([0-9]+)/',$sesonger[$id]['tittel'],$matches)) //Finn nummeret på sesongen
+				$sesonger[$id]['nummer']=$matches[1];
+			else
+				$sesonger[$id]['nummer']=false;
 		}
 		return $sesonger;
 	}
