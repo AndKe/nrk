@@ -14,7 +14,12 @@ class filsjekk
 		$varighet_nrk=str_replace(array(' minutter',' minutt',' timer',' time',','),array('minutes','minute','hours','hour',' '),$varighet_nrk); //Gjør om tidsangivelsen fra NRK så den kan brukes med strtotime
 		$varighet_nrk=strtotime($varighet_nrk,0);
 		$varighet_fil=$this->video->duration($fil); //Hent varighet på filen
-	
+
+		if($varighet_fil===false)
+		{
+			$this->error.="Finner ikke varighet for fil\n";
+			return true;
+		}
 		if($varighet_nrk==$varighet_fil) //Varighet er riktig
 			return true;
 		elseif($varighet_nrk>$varighet_fil && $varighet_nrk-$varighet_fil<=$this->varighettoleranse) //Varighet er innenfor toleransen
@@ -61,7 +66,10 @@ class filsjekk
 			}
 		}
 		else
+		{
+			$this->error.="Filen $fil eksisterer ikke\n";
 			return false; //Filen eksisterer ikke
+		}
 		
 	}
 }
