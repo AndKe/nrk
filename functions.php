@@ -47,6 +47,10 @@ class nrkripper
 		$filnavn=$this->filnavn($this->tittel); //Formater tittel for filnavn
 		
 		$utfil=$utmappe.$filnavn; //Sett sammen utmappe og filnavn til utfil
+
+		if(!file_exists($utfil.'.chapters.txt') && $chapters=$this->chapters($data))
+			file_put_contents($utfil.'.chapters.txt',$chapters);
+
 		if($this->sjekk->sjekkfil($utfil.'.ts',$this->sjekk->varighet($data))) //Sjekk om filen allerede er lastet ned
 		{
 			$this->error.="{$this->tittel} er allerede lastet ned".$this->br;
@@ -57,8 +61,6 @@ class nrkripper
 		if(!$this->sjekk->sjekkfil($utfil.'.mkv',$this->sjekk->varighet($data))) //Sjekk om filen allerede er muxet
 			$this->mkvmerge($utfil);
 		$this->subtitle($id,$utfil);
-		if($chapters=$this->chapters($data))
-			file_put_contents($utfil.'.chapters.txt',$chapters);
 		if(isset($return))
 			return $return;
 	}
@@ -119,13 +121,19 @@ class nrkripper
 	}
 	public function finntittel($data) //Hent tittel fra NRK
 	{
+		$dom=new DOMDocument;
+		@$dom->loadHTML($data);
+		$xpath=new DOMXPath($dom);
+		$info=$xpath->query('//*[@id="episode"]/div[2]');
+		$text=$info->item(0)->textContent;
+
 		if(preg_match('^<meta name="title" content="(.+)"^',$data,$tittel))
 		{
 			$name=strip_tags($tittel[1]);
-			if($episodetext=$this->sesongepisode($data))
+			if($episodetext=$this->sesongepisode($name))
 				$name.=' '.$episodetext;
 			elseif(preg_match('^\<meta name="episodenumber" content="(.+)"^',$data,$episode))
-				$name.=' '.$episode[1];
+				$name.=' EP'.$episode[1];
 			return html_entity_decode($name);
 		}
 		else
@@ -150,6 +158,7 @@ class nrkripper
 		//elseif(preg_match('^\(([0-9]+):([0-9]+)\)^',$description,$episode)) //Episide uten sesong
 		elseif(preg_match('^([0-9]+):([0-9]+)^',$description,$episode)) //Episide uten sesong
 		{
+			print_r($episode);
 			if($returnstring)
 			{
 				$episode[1]=str_pad($episode[1],2,'0',STR_PAD_LEFT);
@@ -263,10 +272,10 @@ class nrkripper
 		$chapters='';
 		foreach ($points as $i=>$point)
 		{
-			if(!is_object($point->childNodes) || $point->childNodes->item(0)->attributes->length!=3) //Hopp over uønskede elementer
+			if(!is_object($point->childNodes) || $point->childNodes->item(0)->attributes->length!=5) //Hopp over uønskede elementer
 				continue;
 			$num=str_pad($num,2,'0',STR_PAD_LEFT);
-			$string=$point->childNodes->item(0)->attributes->item(2)->value;
+			$string=$point->childNodes->item(0)->attributes->item(4)->value;
 			preg_match('/([0-9:]+) (.+) \(/',$string,$time);
 		
 			$chapters.="CHAPTER$num={$time[1]}.000\r\n";
