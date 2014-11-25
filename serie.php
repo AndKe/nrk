@@ -2,13 +2,13 @@
 chdir(dirname(realpath(__FILE__))); //Bytt til mappen scriptet ligger i så relative filbaner blir riktige
 include 'functions.php';
 $nrk=new nrkripper;
-if(!isset($argv[1]))
+
+$options = getopt("",array('subsonly'));
+$serier=array_slice($argv,count($options)+1); //Hent liste over serier fra kommandolinjen
+
+if(empty($serier))
 	$serier=explode("\n",trim(file_get_contents('serier.txt'))); //Hent liste over serier fra fil
-else
-{
-	unset($argv[0]);
-	$serier=$argv; //Hent liste over serier fra kommandolinjen
-}
+
 if(file_exists('sesonger unntak.txt'))
 	$unntak=explode("\n",str_replace("\r","",file_get_contents('sesonger unntak.txt'))); //Finn sesonger som ikke skal hentes
 
@@ -39,8 +39,10 @@ foreach($serier as $url)
 				$nrk->tittel=$serieinfo['serietittel'].' '.$eptext;
 			else
 				$nrk->tittel=$episode['title'];
-
-			$status=$nrk->nrkrip($serieinfo['baseurl'].'/'.$episode['id'],$outpath);
+			if(isset($options['subsonly']))
+				$status=$nrk->subtitle($episode['id'],$outpath.$nrk->filnavn($nrk->tittel));
+			else
+				$status=$nrk->nrkrip($serieinfo['baseurl'].'/'.$episode['id'],$outpath);
 
 			if($status!==false)
 				var_dump($status);
